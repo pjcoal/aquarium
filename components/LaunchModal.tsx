@@ -387,6 +387,12 @@ export function LaunchModal({ onClose }: { onClose: () => void }) {
             <fieldset disabled={running}>
               <legend className="label">its brain</legend>
               <p className="mt-0.5 text-[11px] text-dim">the model that thinks and talks for your fish. all brains are included in the launch fee.</p>
+              {config && !config.models.some((m) => m.available) && (
+                <p className="mt-2 border border-warn/50 px-2 py-1 text-[11px] text-warn">
+                  no ai providers are connected on this server yet, so brains can&apos;t be picked. the site owner needs to add at least one of
+                  ANTHROPIC_API_KEY, OPENAI_API_KEY, XAI_API_KEY or DEEPSEEK_API_KEY.
+                </p>
+              )}
               <div className="mt-2 space-y-2">
                 {providers.map((p) => (
                   <div key={p} className="grid grid-cols-[72px_1fr] items-start gap-2">
