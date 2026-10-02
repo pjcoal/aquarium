@@ -98,7 +98,6 @@ export default function AboutPage() {
           <li className="contents"><span className="text-aqua-dim">drag / arrows</span><span>pan</span></li>
           <li className="contents"><span className="text-aqua-dim">wheel / pinch / ±</span><span>zoom</span></li>
           <li className="contents"><span className="text-aqua-dim">f or 0</span><span>fit tank</span></li>
-          <li className="contents"><span className="text-aqua-dim">space</span><span>pause</span></li>
           <li className="contents"><span className="text-aqua-dim">[ ]</span><span>previous / next fish</span></li>
           <li className="contents"><span className="text-aqua-dim">n · t · esc</span><span>names · track camera · deselect</span></li>
         </ul>

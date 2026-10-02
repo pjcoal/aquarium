@@ -6,7 +6,6 @@ import { getEngine } from '@/simulation/engine'
 import { TANK_H, TANK_W } from '@/simulation/environment'
 import { worldClock } from '@/lib/format'
 import { loadPrefs, savePrefs } from '@/lib/storage'
-import type { SimSpeed } from '@/types/simulation'
 import { useLaunch } from './AppShell'
 
 const MAX_ZOOM_FACTOR = 6
@@ -267,9 +266,6 @@ export function AquariumCanvas({ className = '' }: { className?: string }) {
       case 'f':
         fit()
         break
-      case ' ':
-        engine.setPaused(!engine.ui.paused)
-        break
       case ']':
       case 'Tab':
         if (ev.key === 'Tab') {
@@ -333,15 +329,6 @@ export function AquariumCanvas({ className = '' }: { className?: string }) {
             fit
           </button>
           <span className="mx-0.5 w-px self-stretch bg-line" aria-hidden />
-          <button className="btn" aria-pressed={!!ui?.paused} onClick={() => engine?.setPaused(!ui?.paused)}>
-            {ui?.paused ? 'play' : 'pause'}
-          </button>
-          {([1, 2, 4] as SimSpeed[]).map((s) => (
-            <button key={s} className="btn" aria-pressed={ui?.speed === s} onClick={() => engine?.setSpeed(s)} aria-label={`Speed ${s}x`}>
-              {s}x
-            </button>
-          ))}
-          <span className="mx-0.5 w-px self-stretch bg-line" aria-hidden />
           <button className="btn" onClick={() => engine?.feed(undefined, true)} title="Drop a pinch of food">
             feed
           </button>
@@ -360,7 +347,7 @@ export function AquariumCanvas({ className = '' }: { className?: string }) {
           tabIndex={0}
           role="application"
           aria-roledescription="aquarium"
-          aria-label={`Live aquarium with ${engine?.world.fish.length ?? 0} fish, ${awake} awake. Arrow keys pan, plus and minus zoom, F fits, space pauses, [ and ] select fish, Escape clears selection.`}
+          aria-label={`Live aquarium with ${engine?.world.fish.length ?? 0} fish, ${awake} awake. Arrow keys pan, plus and minus zoom, F fits, [ and ] select fish, Escape clears selection.`}
           onKeyDown={onKeyDown}
         >
           <canvas
