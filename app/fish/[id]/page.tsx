@@ -5,7 +5,7 @@ import { useEngine } from '@/lib/hooks'
 import { SPECIES } from '@/simulation/species'
 import { PRESETS, statusOf } from '@/simulation/fish'
 import { relationLabel } from '@/simulation/relationships'
-import { age, ago, asciiFor, clock, depthLabel, dur, pct } from '@/lib/format'
+import { age, ago, clock, depthLabel, dur, pct } from '@/lib/format'
 import { FishSprite } from '@/components/FishSprite'
 import { MiniMap } from '@/components/MiniMap'
 import { Bar } from '@/components/Bar'
@@ -73,11 +73,8 @@ export default function FishProfilePage() {
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <section className="panel grid gap-4 p-4 sm:grid-cols-[minmax(0,300px)_1fr]" aria-label="Identity">
           <div className="flex flex-col gap-2">
-            <div className="flex h-[170px] items-center justify-center border border-line bg-[radial-gradient(ellipse_at_center,#0d3341,#03070b_75%)]">
-              <FishSprite look={fish} width={280} height={160} animate label={`${fish.name}, a ${sp.name}`} />
-            </div>
-            <div className="text-center text-[16px] whitespace-pre" style={{ color: fish.color }} aria-hidden>
-              {asciiFor({ species: fish.species, heading: 0 })}
+            <div className="flex h-[170px] items-center justify-center border border-line bg-ink">
+              <FishSprite look={{ species: fish.species, color: fish.color }} width={280} height={160} animate label={`${fish.name}, a ${sp.name}`} />
             </div>
           </div>
           <div className="min-w-0">

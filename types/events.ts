@@ -5,6 +5,7 @@ export type EventCategory =
   | 'territorial'
   | 'discovery'
   | 'resting'
+  | 'market'
   | 'system'
 
 export interface SimEvent {

@@ -24,7 +24,10 @@ export interface SpeciesDef {
   perception: number
   color: string
   accent: string
+  /** single-line glyph, facing right */
   ascii: string
+  /** tank rendering art, facing right; may be several lines */
+  art: string[]
   traits: string[]
   description: string
 }
@@ -33,7 +36,7 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
   'neon-tetra': {
     id: 'neon-tetra',
     name: 'Neon Tetra',
-    length: 30,
+    length: 78,
     bodyRatio: 0.3,
     maxSpeed: 115,
     cruise: 0.45,
@@ -49,13 +52,14 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
     color: '#3ad7ff',
     accent: '#ff3b4e',
     ascii: '><(((°>',
+    art: ['><(((°>'],
     traits: ['high schooling', 'high speed', 'middle depth', 'low aggression'],
     description: 'Small, quick, and almost never alone. Reads the shoal before it reads the water.',
   },
   guppy: {
     id: 'guppy',
     name: 'Guppy',
-    length: 30,
+    length: 78,
     bodyRatio: 0.32,
     maxSpeed: 95,
     cruise: 0.5,
@@ -71,13 +75,14 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
     color: '#ff8a3d',
     accent: '#5ec8ff',
     ascii: '}}<((°>',
+    art: ['}}<((°>'],
     traits: ['medium schooling', 'restless', 'upper depth', 'big appetite'],
     description: 'Curious surface-skimmers with fan tails. Always the first to notice food.',
   },
   betta: {
     id: 'betta',
     name: 'Betta',
-    length: 50,
+    length: 100,
     bodyRatio: 0.34,
     maxSpeed: 70,
     cruise: 0.35,
@@ -93,13 +98,14 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
     color: '#c2185b',
     accent: '#5b6cff',
     ascii: '{{<((((°>',
+    art: ['{{<((((°>'],
     traits: ['low schooling', 'medium speed', 'upper/middle depth', 'high territoriality'],
     description: 'Long-finned and proud. Claims a place and patrols it with great seriousness.',
   },
   clownfish: {
     id: 'clownfish',
     name: 'Clownfish',
-    length: 40,
+    length: 78,
     bodyRatio: 0.44,
     maxSpeed: 80,
     cruise: 0.4,
@@ -115,13 +121,14 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
     color: '#ff7a1a',
     accent: '#ffffff',
     ascii: '><|||°>',
+    art: ['><|||°>'],
     traits: ['low schooling', 'stays near shelter', 'lower depth', 'territorial'],
     description: 'Keeps close to shelter and defends it. Forms pairs more often than groups.',
   },
   angelfish: {
     id: 'angelfish',
     name: 'Angelfish',
-    length: 55,
+    length: 68,
     bodyRatio: 0.55,
     maxSpeed: 55,
     cruise: 0.38,
@@ -137,13 +144,14 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
     color: '#d9dde3',
     accent: '#1d2430',
     ascii: '><{{{°>',
+    art: ['  /|  ', '<(((°>', '  \\|  '],
     traits: ['medium schooling', 'slow movement', 'middle depth', 'medium territoriality'],
     description: 'Tall, slow and deliberate. Glides more than it swims.',
   },
   goldfish: {
     id: 'goldfish',
     name: 'Goldfish',
-    length: 55,
+    length: 100,
     bodyRatio: 0.55,
     maxSpeed: 60,
     cruise: 0.4,
@@ -159,13 +167,14 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
     color: '#ff9f1c',
     accent: '#ffd166',
     ascii: '><((((°)>',
+    art: ['><((((°)>'],
     traits: ['low schooling', 'forager', 'lower depth', 'always hungry'],
     description: 'A patient forager. Spends its days sifting the sand for anything edible.',
   },
   'zebra-danio': {
     id: 'zebra-danio',
     name: 'Zebra Danio',
-    length: 30,
+    length: 78,
     bodyRatio: 0.26,
     maxSpeed: 135,
     cruise: 0.55,
@@ -181,13 +190,14 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
     color: '#e8d27a',
     accent: '#2b3f8f',
     ascii: '><≡≡≡°>',
+    art: ['><≡≡≡°>'],
     traits: ['high schooling', 'very high speed', 'surface depth', 'never still'],
     description: 'Striped sprinters of the upper water. Restless, social, and a little chaotic.',
   },
   'cherry-barb': {
     id: 'cherry-barb',
     name: 'Cherry Barb',
-    length: 32,
+    length: 78,
     bodyRatio: 0.38,
     maxSpeed: 90,
     cruise: 0.45,
@@ -203,6 +213,7 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
     color: '#e0313f',
     accent: '#5a1520',
     ascii: '><(((•>',
+    art: ['><(((•>'],
     traits: ['medium-high schooling', 'peaceful', 'lower-middle depth', 'likes plants'],
     description: 'Quiet, red, and fond of planted corners. Schools loosely and shyly.',
   },
@@ -212,7 +223,7 @@ export const SPECIES_LIST: SpeciesDef[] = Object.values(SPECIES)
 
 /** mirror an ascii fish so it faces left */
 export function asciiLeft(s: string): string {
-  const swap: Record<string, string> = { '<': '>', '>': '<', '(': ')', ')': '(', '{': '}', '}': '{' }
+  const swap: Record<string, string> = { '<': '>', '>': '<', '(': ')', ')': '(', '{': '}', '}': '{', '/': '\\', '\\': '/' }
   return s
     .split('')
     .reverse()

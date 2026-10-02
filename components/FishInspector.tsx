@@ -50,7 +50,7 @@ export function FishInspector({ fish, engine, onClose }: { fish: Fish; engine: E
   return (
     <section aria-label={`Inspector: ${fish.name}`} className="text-[12px]">
       <header className="flex items-start gap-3 border-b border-line pb-2">
-        <div className="shrink-0 border border-line bg-[radial-gradient(ellipse_at_center,#0b2c38,#03070b)]">
+        <div className="shrink-0 border border-line bg-ink">
           <FishSprite look={fish} width={76} height={48} label={`${fish.name}, ${sp.name}`} />
         </div>
         <div className="min-w-0 flex-1">

@@ -4,7 +4,7 @@ import type { EventCategory } from '@/types/events'
 import { useEngine } from '@/lib/hooks'
 import { ActivityFeed } from '@/components/ActivityFeed'
 
-const FILTERS: (EventCategory | 'all')[] = ['all', 'social', 'feeding', 'exploration', 'territorial', 'discovery', 'resting', 'system']
+const FILTERS: (EventCategory | 'all')[] = ['all', 'social', 'feeding', 'exploration', 'territorial', 'discovery', 'resting', 'market', 'system']
 
 export default function ActivityPage() {
   const engine = useEngine()

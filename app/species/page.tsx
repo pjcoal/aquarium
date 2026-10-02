@@ -26,8 +26,8 @@ export default function SpeciesPage() {
           ]
           return (
             <section key={s.id} className="panel p-3 text-[12px]" aria-label={s.name}>
-              <div className="flex h-[80px] items-center justify-center border border-line bg-[radial-gradient(ellipse_at_center,#0b2c38,#03070b)]">
-                <FishSprite look={{ species: s.id, color: s.color, accent: s.accent, scale: 1 }} width={150} height={74} label={s.name} />
+              <div className="flex h-[80px] items-center justify-center border border-line bg-ink">
+                <FishSprite look={{ species: s.id, color: s.color }} width={150} height={74} label={s.name} />
               </div>
               <div className="mt-2 flex items-baseline justify-between">
                 <h2 className="font-bold tracking-[0.15em]">{s.name.toUpperCase()}</h2>

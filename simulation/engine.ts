@@ -5,7 +5,7 @@ import { SpatialHash } from './spatial'
 import { EventLog } from './events'
 import { STATIC_PLACES, SURFACE_Y, TANK_W, dayPhase, locationPhrase, makeCuriosity, nearestStaticPlace, sandY } from './environment'
 import { angleDiff, constrain, dist, limit, v } from './steering'
-import { decide, hidePhrase, maxSpeedOf, perceive, placeTarget, restPhrase, speedFor, steer, type FishRuntime, type Perception, type Sim } from './behavior'
+import { decide, hidePhrase, maxSpeedOf, perceive, pickShelter, placeTarget, restPhrase, speedFor, steer, type FishRuntime, type Perception, type Sim } from './behavior'
 import { leaveSchool, schoolForce, updateSchools } from './schooling'
 import { compatibility, decayRelationships, nudge, peekRel, rel, relationLabel } from './relationships'
 import { MAX_HISTORY, MAX_THOUGHTS, adjustAffinity, favoritePlace, recallFoodSpot, remember } from './memory'
@@ -14,6 +14,7 @@ import { createSeedWorld } from './seed'
 import { clamp } from '@/lib/random'
 import { loadWorld, saveWorld } from '@/lib/storage'
 import { createThoughtGenerator, type ThoughtContext, type ThoughtGenerator } from '@/lib/thoughtEngine'
+import { MOOD_EFFECTS, fmtPct, marketMood, type MarketMood, type MarketSnapshot } from './market'
 
 export interface UIState {
   selectedId: string | null
@@ -46,6 +47,11 @@ export class Engine implements Sim {
   fps = 60
   /** world time ms of the last catch-up, and how long the absence was */
   lastAbsence: { ms: number; at: number } | null = null
+  /** latest token market data, and the mood the tank feels from it */
+  market: MarketSnapshot | null = null
+  marketMood: MarketMood = 'calm'
+  private candleAt = 0
+  private pendingMood: { mood: MarketMood; seen: number } | null = null
 
   private runtime = new Map<string, FishRuntime>()
   private placeMap = new Map<string, Place>()
@@ -285,9 +291,13 @@ export class Engine implements Sim {
     const speedFrac = f.speed / sp.maxSpeed
     if (f.action === 'REST') f.energy = clamp(f.energy + dt * (rt.arrived ? 0.006 : 0.0015) * (night ? 1.4 : 1))
     else f.energy = clamp(f.energy - dt * (0.00028 + 0.0008 * speedFrac) * (1.2 - P.energy * 0.4) * (night ? 1.3 : 1))
+    const fx = MOOD_EFFECTS[this.marketMood]
     if (f.action === 'EXPLORE' || f.action === 'INVESTIGATE') f.curiosity = clamp(f.curiosity - dt * 0.01)
-    else f.curiosity = clamp(f.curiosity + dt * 0.004 * (0.3 + P.curiosity))
+    else f.curiosity = clamp(f.curiosity + dt * 0.004 * (0.3 + P.curiosity) * fx.curiosity)
     f.stress = clamp(f.stress - dt * (f.action === 'HIDE' && rt.arrived ? 0.1 : 0.035))
+    // a falling market leaves timid fish with an anxiety they can't shake
+    const floor = fx.stressFloor * (1 - P.bravery)
+    if (f.stress < floor) f.stress = Math.min(floor, f.stress + dt * 0.08)
     if (f.enteringUntil && now > f.enteringUntil) f.enteringUntil = 0
 
     // --- interrupts
@@ -377,16 +387,16 @@ export class Engine implements Sim {
     if (w.food.length) w.food = w.food.filter((f) => f.settledAt === null || now - f.settledAt < 240_000)
     if (now > w.counters.nextFeedAt) {
       this.feed()
-      w.counters.nextFeedAt = now + (3 + this.rand() * 2.5) * 60_000
+      w.counters.nextFeedAt = now + (3 + this.rand() * 2.5) * 60_000 * MOOD_EFFECTS[this.marketMood].feedInterval
     }
   }
 
   /** drop food. x is optional; auto-feeder prefers the filter side */
-  feed(x?: number, manual = false): void {
+  feed(x?: number, manual = false, reason?: string): void {
     const w = this.world
     const r = this.rand
     const cx = x ?? (r() < 0.55 ? 1440 + r() * 200 : 200 + r() * (TANK_W - 400))
-    const n = Math.min(24, 6 + Math.round(w.fish.length / 2.5))
+    const n = Math.min(30, Math.round((6 + w.fish.length / 2.5) * MOOD_EFFECTS[this.marketMood].feedAmount))
     for (let i = 0; i < n && w.food.length < MAX_FOOD; i++) {
       w.food.push({
         id: w.counters.nextFoodId++,
@@ -400,7 +410,7 @@ export class Engine implements Sim {
     }
     w.counters.lastFeedAt = w.worldTime
     const where = locationPhrase({ x: cx, y: 150 }, this.placeList)
-    this.log.emit('feeding', manual ? `you dropped food ${where}` : `food is drifting down ${where}`, [])
+    this.log.emit('feeding', manual ? `you dropped food ${where}` : reason ? `${reason}. food is drifting down ${where}` : `food is drifting down ${where}`, [])
   }
 
   private updateCuriosities(): void {
@@ -794,8 +804,82 @@ export class Engine implements Sim {
       recentMemories: f.memories.slice(0, 4).map((m) => ({ text: m.text, minAgo: (now - m.t) / 60_000 })),
       bubblesNearby: dist(f.pos, { x: 780, y: 760 }) < 200,
       previousThoughts: f.thoughts.slice(0, 4).map((t) => t.text),
+      market: this.market && this.market.source !== 'pending' ? this.marketMood : null,
       seq: f.thoughts.length + Math.floor(now / 1000),
     }
+  }
+
+  /* ------------------------------------------------------------ */
+  /* token market                                                  */
+  /* ------------------------------------------------------------ */
+
+  applyMarket(s: MarketSnapshot): void {
+    const first = !this.market
+    this.market = s
+    const T = `$${s.ticker}`
+    const tag = s.source === 'sim' ? ' (simulated)' : ''
+    // hysteresis: a new mood has to hold for two readings before the tank feels it
+    let mood = marketMood(s)
+    if (!first && mood !== this.marketMood) {
+      if (this.pendingMood?.mood === mood) this.pendingMood.seen++
+      else this.pendingMood = { mood, seen: 1 }
+      if (this.pendingMood.seen < 2) mood = this.marketMood
+    } else this.pendingMood = null
+    if (mood !== this.marketMood) {
+      this.marketMood = mood
+      this.pendingMood = null
+      if (!first || mood !== 'calm') {
+        const h = fmtPct(s.change1h)
+        const text: Record<MarketMood, string> = {
+          euphoric: `the water turned bright green: ${T} ${h} in 1h`,
+          bullish: `a green current runs through the tank: ${T} ${h} in 1h`,
+          calm: `the current settles: ${T} ${h} in 1h`,
+          bearish: `the water takes on a red tint: ${T} ${h} in 1h`,
+          panic: `red tide: ${T} ${h} in 1h. the fish scatter`,
+        }
+        this.log.emit('market', text[mood] + tag, [], { key: 'market-mood', cooldownMs: 3 * 60_000 })
+      }
+    }
+    const now = Date.now()
+    if (now - this.candleAt > 4 * 60_000) {
+      if (s.change5m <= -8) {
+        this.candleAt = now
+        this.redCandle(s, tag)
+      } else if (s.change5m >= 8) {
+        this.candleAt = now
+        this.greenCandle(s, tag)
+      }
+    }
+    this.notify()
+  }
+
+  private redCandle(s: MarketSnapshot, tag: string): void {
+    const t = this.world.worldTime
+    let fled = 0
+    for (const f of this.world.fish) {
+      if (f.enteringUntil) continue
+      f.stress = clamp(f.stress + 0.25 + (1 - f.personality.bravery) * 0.5)
+      if (f.personality.bravery < 0.6 && f.action !== 'REST') {
+        // timid fish bolt for the nearest shelter
+        this.hide(f, pickShelter(this, f, 'hide', null), null)
+        f.actionDetail = `${f.actionDetail} from the red water`
+        f.nextDecisionAt = this.world.worldTime + 6000 + this.rand() * 6000
+        fled++
+      } else f.nextDecisionAt = 0
+      remember(f, { t, kind: 'threat', text: 'felt the water turn red', valence: -0.4 })
+      this.thinkSoon(f)
+    }
+    this.log.emit('market', `a red candle shook the tank ($${s.ticker} ${fmtPct(s.change5m)} in 5m). ${fled} fish ran for cover${tag}`, [])
+  }
+
+  private greenCandle(s: MarketSnapshot, tag: string): void {
+    const t = this.world.worldTime
+    for (const f of this.world.fish) {
+      f.curiosity = clamp(f.curiosity + 0.3)
+      f.energy = clamp(f.energy + 0.1)
+      remember(f, { t, kind: 'place', text: 'felt a warm green current', valence: 0.4 })
+    }
+    this.feed(undefined, false, `a green candle ($${s.ticker} ${fmtPct(s.change5m)} in 5m) set off the feeder${tag}`)
   }
 
   /* ------------------------------------------------------------ */

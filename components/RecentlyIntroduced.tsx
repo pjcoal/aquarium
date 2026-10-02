@@ -23,7 +23,7 @@ export function RecentlyIntroduced({ count = 6 }: { count?: number }) {
           return (
             <li key={f.id}>
               <Link href={`/fish/${f.id}`} className="block border border-line bg-panel/50 p-2 hover:border-aqua-dim">
-                <div className="flex h-[52px] items-center justify-center bg-[radial-gradient(ellipse_at_center,#0b2c38,#03070b)]">
+                <div className="flex h-[52px] items-center justify-center bg-ink">
                   <FishSprite look={f} width={84} height={50} label={`${f.name}, ${SPECIES[f.species].name}`} />
                 </div>
                 <div className="mt-1.5 text-[12px] font-bold tracking-[0.12em]">{f.name.toUpperCase()}</div>

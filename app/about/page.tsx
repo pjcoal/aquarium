@@ -2,6 +2,9 @@
 import { useEngine } from '@/lib/hooks'
 import { resetEngine } from '@/simulation/engine'
 import { age } from '@/lib/format'
+import { getMarketFeed } from '@/lib/marketFeed'
+import { TOKEN } from '@/lib/token'
+import { MOOD_EFFECTS, fmtPct } from '@/simulation/market'
 
 export default function AboutPage() {
   const engine = useEngine()
@@ -52,6 +55,49 @@ export default function AboutPage() {
           <code className="text-aqua-dim">lib/thoughtEngine.ts</code>); set <code className="text-aqua-dim">NEXT_PUBLIC_THOUGHT_ENDPOINT</code> to
           route thoughts through an LLM-backed endpoint instead.
         </p>
+      </section>
+      <section>
+        <h2 className="label mb-1">the token</h2>
+        <p className="text-fg/85">
+          the tank is wired to <span className="text-aqua">${TOKEN.ticker}</span> on solana. the fish can&apos;t see charts, but they feel them: a
+          rising market runs green through the water and keeps the feeder busy; a falling one turns it red, food gets scarce, and timid fish
+          stay anxious until it passes. a sharp red candle sends the whole tank running for cover. a sharp green one sets off the feeder.
+          heavy buying makes the bubble stone roar.
+        </p>
+        <ul className="mt-2 grid grid-cols-[90px_1fr] gap-y-0.5 text-[12px] text-dim">
+          {(Object.keys(MOOD_EFFECTS) as (keyof typeof MOOD_EFFECTS)[]).map((m) => (
+            <li key={m} className="contents">
+              <span className="text-fg/80">{m}</span>
+              <span>
+                feeding ×{(MOOD_EFFECTS[m].feedAmount / MOOD_EFFECTS[m].feedInterval).toFixed(1)}
+                {MOOD_EFFECTS[m].stressFloor ? ` · lingering anxiety ${Math.round(MOOD_EFFECTS[m].stressFloor * 100)}%` : ''}
+                {MOOD_EFFECTS[m].curiosity !== 1 ? ` · curiosity ×${MOOD_EFFECTS[m].curiosity}` : ''}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {engine?.market?.source === 'sim' ? (
+          <div className="panel mt-3 p-3 text-[12px]">
+            <p className="text-dim">
+              no token address is configured yet, so the tank is running on a <span className="text-fg">simulated market</span>. set{' '}
+              <code className="text-aqua-dim">NEXT_PUBLIC_TOKEN_MINT</code> to switch to live data. try the reactions:
+            </p>
+            <div className="mt-2 flex gap-2">
+              <button className="btn hover:border-good! hover:text-good!" onClick={() => getMarketFeed()?.simCandle(18)}>
+                green candle {fmtPct(18)}
+              </button>
+              <button className="btn hover:border-bad! hover:text-bad!" onClick={() => getMarketFeed()?.simCandle(-18)}>
+                red candle {fmtPct(-18)}
+              </button>
+            </div>
+          </div>
+        ) : (
+          TOKEN.mint && (
+            <p className="mt-2 text-[12px] text-dim">
+              ca <code className="break-all text-fg/80">{TOKEN.mint}</code> · market data from dexscreener, refreshed every 30s
+            </p>
+          )
+        )}
       </section>
       <section>
         <h2 className="label mb-1">persistence</h2>

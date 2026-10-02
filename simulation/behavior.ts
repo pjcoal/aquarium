@@ -7,7 +7,7 @@ import { TANK_W, depthFraction, locationPhrase, sandY, SURFACE_Y } from './envir
 import { add, arrive, avoidObstacles, boundaries, dist, flee, pursue, seek, v, wander } from './steering'
 import { peekRel, rel } from './relationships'
 import { favoritePlace, recallFoodSpot } from './memory'
-import { bodyLength } from './fish'
+import { bodyHeight, bodyLength } from './fish'
 import { clamp } from '@/lib/random'
 
 /** per-fish runtime data that is not persisted */
@@ -152,7 +152,7 @@ export function avoidedOwner(sim: Sim, f: Fish, pl: Place): Fish | null {
   return sim.byId.get(ownerId) ?? null
 }
 
-function pickShelter(sim: Sim, f: Fish, purpose: 'rest' | 'hide', threat: Fish | null): Place | null {
+export function pickShelter(sim: Sim, f: Fish, purpose: 'rest' | 'hide', threat: Fish | null): Place | null {
   let best: Place | null = null
   let bestScore = -Infinity
   for (const pl of sim.allPlaces()) {
@@ -355,8 +355,8 @@ export function decide(sim: Sim, f: Fish, p: Perception): void {
     const t = p.threat
     if (p.threatDist < 120) opt('FLEE', (1 - P.bravery) * 1.5 + f.stress, () => sim.setAction(f, 'FLEE', `fleeing from ${t.name}`, null, t.id))
     opt('HIDE', (1 - P.bravery) * 1.4 + f.stress * 0.8, () => sim.hide(f, pickShelter(sim, f, 'hide', t), t))
-  } else if (f.stress > 0.55) {
-    opt('HIDE', (1 - P.bravery) * 0.7 + f.stress * 0.3, () => sim.hide(f, pickShelter(sim, f, 'hide', null), null))
+  } else if (f.stress > 0.45) {
+    opt('HIDE', (1 - P.bravery) * 0.9 + f.stress * 0.6, () => sim.hide(f, pickShelter(sim, f, 'hide', null), null))
   }
 
   // --- territory
@@ -630,17 +630,22 @@ export function steer(sim: Sim, f: Fish, dt: number, schoolForce: Vec): Vec {
       doWander()
   }
 
-  // generic: separation from everyone nearby
+  // generic: separation from everyone nearby. Fish are wide and short, so
+  // personal space is an ellipse: they stack in rows rather than overlap.
   sim.grid.query(f.pos.x, f.pos.y, L * 2.2, near)
   const sep = v()
+  const H = bodyHeight(f)
   for (const o of near) {
     if (o === f) continue
-    const d = dist(f.pos, o.pos)
-    const minD = (L + bodyLength(o)) * 0.55
-    if (d < minD && d > 0.01) {
-      const k = (1 - d / minD) * max * 1.6
-      sep.x += ((f.pos.x - o.pos.x) / d) * k
-      sep.y += ((f.pos.y - o.pos.y) / d) * k
+    const rx = (L + bodyLength(o)) * 0.5
+    const ry = (H + bodyHeight(o)) * 0.5 + 4
+    const nx = (f.pos.x - o.pos.x) / rx
+    const ny = (f.pos.y - o.pos.y) / ry
+    const nd = Math.hypot(nx, ny)
+    if (nd < 1 && nd > 0.001) {
+      const k = (1 - nd) * max * 1.6
+      sep.x += (nx / nd) * k
+      sep.y += (ny / nd) * k
     }
   }
   add(force, sep, f.action === 'REST' ? 0.5 : 1)

@@ -11,7 +11,28 @@ npm run build && npm start
 npm run sim        # headless: simulate 30 minutes and print what happened
 ```
 
-No API keys or external assets. Everything is drawn procedurally on canvas, and sound is synthesized with WebAudio.
+No API keys or external assets. The tank is rendered entirely as ASCII on a canvas (fish like `><(((°>`, rocks of `#%@`, sand of `.,:`), and sound is synthesized with WebAudio.
+
+## The token
+
+The tank reacts to a Solana token's market:
+
+| market | in the tank |
+| --- | --- |
+| euphoric / bullish (green) | green tint, feeder runs faster and drops more, fish get curious, green thoughts |
+| bearish / panic (red) | red tint, food gets scarce, timid fish carry lingering anxiety and hide |
+| red candle (≤ −8% in 5m) | the whole tank flinches, timid fish bolt for shelter |
+| green candle (≥ +8% in 5m) | the feeder fires |
+| heavy buying | the bubble stone roars |
+
+Until launch, leave `NEXT_PUBLIC_TOKEN_MINT` unset and the tank runs on a clearly labelled **simulated** market (the About page has buttons to fire test candles). After launch, set these in Vercel → Project → Settings → Environment Variables and redeploy:
+
+```
+NEXT_PUBLIC_TOKEN_MINT=<mint address>
+NEXT_PUBLIC_TOKEN_TICKER=<ticker>
+```
+
+Live data comes from the DexScreener API (polled every 30s from the browser). See `lib/token.ts`, `lib/marketFeed.ts` and `simulation/market.ts`.
 
 ## Layout
 
@@ -23,7 +44,8 @@ No API keys or external assets. Everything is drawn procedurally on canvas, and 
 | `simulation/schooling.ts` | emergent school formation, joining, leaving, merging, boids forces |
 | `simulation/relationships.ts`, `memory.ts`, `events.ts` | social graph, memories & learned place affinity, event log with cooldowns |
 | `simulation/environment.ts`, `species.ts`, `seed.ts` | tank geometry, landmarks, day cycle, species parameters, starting population |
-| `lib/renderer.ts`, `lib/fishDrawing.ts` | canvas renderer (water, light rays, plants, bubbles, fish) |
+| `lib/renderer.ts`, `lib/asciiFish.ts` | ASCII canvas renderer (scenery on a character grid, swaying plants, bubbles, fish) |
+| `simulation/market.ts`, `lib/marketFeed.ts`, `lib/token.ts` | token config, DexScreener / simulated market feed, market moods and their effects |
 | `lib/thoughtEngine.ts` | `ThoughtGenerator` interface, deterministic local generator, remote/LLM adapter |
 | `lib/storage.ts` | localStorage persistence |
 | `components/`, `app/` | React UI. It reads engine state at ~2.5 Hz and never re-renders per frame. |

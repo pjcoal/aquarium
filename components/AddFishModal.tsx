@@ -216,8 +216,8 @@ export function AddFishModal({ onClose }: { onClose: () => void }) {
           <div className="flex flex-col gap-3">
             <div className="border border-line bg-ink p-2">
               <div className="label mb-1">preview</div>
-              <div className="flex h-[120px] items-center justify-center bg-[radial-gradient(ellipse_at_center,#0b2c38,#03070b)]">
-                <FishSprite look={{ species, color, accent: sp.accent, scale: 1 }} width={190} height={110} animate label={`preview of ${sp.name}`} />
+              <div className="flex h-[120px] items-center justify-center bg-ink">
+                <FishSprite look={{ species, color }} width={190} height={110} animate label={`preview of ${sp.name}`} />
               </div>
               <div className="mt-2 text-[12px]">
                 <div className="text-fg">{(name || 'unnamed').toUpperCase()}</div>

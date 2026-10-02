@@ -167,6 +167,11 @@ export function bodyLength(f: Fish): number {
   return SPECIES[f.species].length * f.scale
 }
 
+/** visual height: one text row per line of the fish's ASCII art */
+export function bodyHeight(f: Fish): number {
+  return SPECIES[f.species].art.length * 24
+}
+
 export function isAwake(f: Fish): boolean {
   return f.action !== 'REST'
 }

@@ -35,6 +35,8 @@ export interface ThoughtContext {
   recentMemories: { text: string; minAgo: number }[]
   bubblesNearby: boolean
   previousThoughts: string[]
+  /** how the token market feels from inside the tank, if there is one */
+  market: 'euphoric' | 'bullish' | 'calm' | 'bearish' | 'panic' | null
   /** a counter, for deterministic variety */
   seq: number
 }
@@ -152,6 +154,21 @@ export class LocalThoughtGenerator implements ThoughtGenerator {
       if (m.minAgo < 1 || m.minAgo > 45) continue
       const when = m.minAgo < 2 ? 'a minute ago' : m.minAgo < 15 ? 'a little while ago' : 'earlier'
       add(0.9, `${when} i ${m.text}. i keep thinking about it.`)
+    }
+
+    // the market, as felt from inside the water
+    if (c.market === 'euphoric') {
+      add(2.5, 'the water tastes green today. everyone is swimming faster.')
+      add(1.5, "the feeder can't stop. i'm not complaining.")
+    } else if (c.market === 'bullish') {
+      add(1.5, 'the current feels warm and green.')
+      add(1, 'something good is happening above the surface.')
+    } else if (c.market === 'bearish') {
+      add(1.8, "the water has a red taste. i don't trust it.")
+      add(1.2, 'less food lately. the big ones are getting short-tempered.')
+    } else if (c.market === 'panic') {
+      add(3.5, `everything is red. find ${c.traits.bravery < 0.5 ? 'the cave' : 'somewhere quiet'}.`)
+      add(2.5, 'the whole tank flinched at once.')
     }
 
     // personality colour
