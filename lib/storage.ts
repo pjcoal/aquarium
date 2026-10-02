@@ -1,7 +1,8 @@
 import type { WorldState } from '@/types/simulation'
 
 const KEY = 'aquarium.world.v1'
-export const WORLD_VERSION = 1
+/** bumped to 2 when the sample fish were removed: older local saves are discarded */
+export const WORLD_VERSION = 2
 
 export function loadWorld(): WorldState | null {
   try {

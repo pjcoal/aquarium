@@ -183,10 +183,3 @@ export function statusOf(f: Fish): 'AWAKE' | 'RESTING' | 'HIDING' | 'FLEEING' | 
   if (f.action === 'FLEE') return 'FLEEING'
   return 'AWAKE'
 }
-
-export const NAME_POOL = [
-  'Luna', 'Milo', 'Nova', 'Finn', 'Atlas', 'Coral', 'Pip', 'Juno', 'Orin', 'Kesh', 'Wren', 'Ivo',
-  'Sable', 'Tull', 'Mira', 'Basil', 'Echo', 'Fable', 'Gus', 'Hollis', 'Ines', 'Jet', 'Koi', 'Lark',
-  'Moss', 'Nell', 'Oslo', 'Perch', 'Quill', 'Rue', 'Sol', 'Tamsin', 'Umber', 'Vela', 'Wick', 'Yara',
-  'Zeno', 'Bram', 'Cass', 'Dot', 'Ember', 'Fig', 'Glim', 'Hux', 'Indi', 'Jory', 'Kit', 'Lumen',
-]
