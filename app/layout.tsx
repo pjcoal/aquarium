@@ -4,7 +4,7 @@ import { AppShell } from '@/components/AppShell'
 
 export const metadata: Metadata = {
   title: 'Tank — every fish has a mind',
-  description: 'A persistent digital aquarium populated by autonomous fish agents.',
+  description: 'A shared ASCII aquarium where every fish is a coin launched on pump.fun, with an AI brain its creator chose.',
 }
 
 export const viewport: Viewport = {
