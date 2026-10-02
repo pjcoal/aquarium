@@ -8,6 +8,7 @@ import { ActivityFeed } from '@/components/ActivityFeed'
 import { ThoughtStream } from '@/components/ThoughtStream'
 import { RecentlyIntroduced } from '@/components/RecentlyIntroduced'
 import { ExploreFish } from '@/components/ExploreFish'
+import { TankTalk } from '@/components/TankTalk'
 
 export default function WorldPage() {
   const engine = useEngine()
@@ -37,8 +38,9 @@ export default function WorldPage() {
               <FishInspector fish={sel} engine={engine} onClose={() => engine.select(null)} />
             ) : (
               <>
-                <div className="label mb-2">thought stream</div>
-                <ThoughtStream />
+                <TankTalk />
+                <div className="label mt-4 mb-2 border-t border-line pt-3">thought stream</div>
+                <ThoughtStream count={4} />
               </>
             )}
           </div>
@@ -62,6 +64,9 @@ export default function WorldPage() {
           <FishInspector fish={sel} engine={engine} onClose={() => engine.select(null)} />
         </div>
       )}
+      <div className="panel p-3 lg:hidden">
+        <TankTalk />
+      </div>
       <details className="panel p-3 lg:hidden" open>
         <summary className="label cursor-pointer">live activity</summary>
         <ActivityFeed limit={14} showCategory={false} className="mt-2" />

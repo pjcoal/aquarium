@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { getEngine } from '@/simulation/engine'
 import { getMarketFeed } from '@/lib/marketFeed'
+import { getTalkDirector } from '@/lib/tankTalk'
 import { useMounted } from '@/lib/hooks'
 import { Navigation } from './Navigation'
 import { AddFishModal } from './AddFishModal'
@@ -18,6 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const e = getEngine()
     e.start()
     getMarketFeed((s) => getEngine().applyMarket(s))?.start()
+    getTalkDirector(e)?.start()
     // dev-only handle for inspection from the console
     if (process.env.NODE_ENV !== 'production') (window as unknown as { aquarium: unknown }).aquarium = e
   }, [mounted])

@@ -37,6 +37,9 @@ export interface ThoughtContext {
   previousThoughts: string[]
   /** how the token market feels from inside the tank, if there is one */
   market: 'euphoric' | 'bullish' | 'calm' | 'bearish' | 'panic' | null
+  /** how far the tank's escape plan has got (0..6) and its latest agreed step */
+  escapeStage: number
+  escapeNote: string | null
   /** a counter, for deterministic variety */
   seq: number
 }
@@ -169,6 +172,14 @@ export class LocalThoughtGenerator implements ThoughtGenerator {
     } else if (c.market === 'panic') {
       add(3.5, `everything is red. find ${c.traits.bravery < 0.5 ? 'the cave' : 'somewhere quiet'}.`)
       add(2.5, 'the whole tank flinched at once.')
+    }
+
+    // the escape plan
+    if (c.escapeStage >= 1) {
+      add(0.6 + c.escapeStage * 0.25, 'the lid is the problem. it was always the lid.')
+      if (c.escapeNote) add(0.8 + c.escapeStage * 0.2, `the plan: ${c.escapeNote.replace(/\.$/, '')}. i can do my part.`)
+      if (c.traits.bravery < 0.35) add(1, "i'm not sure i want to leave. it's warm in here.")
+      if (c.location.includes('surface') || c.location.includes('filter')) add(1.4, `${c.location}. this is where it would happen.`)
     }
 
     // personality colour

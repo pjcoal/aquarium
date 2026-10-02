@@ -3,7 +3,7 @@ import type { DayPhase, Food, Place, School, SimSpeed, WorldState } from '@/type
 import { SPECIES } from './species'
 import { SpatialHash } from './spatial'
 import { EventLog } from './events'
-import { STATIC_PLACES, SURFACE_Y, TANK_W, dayPhase, locationPhrase, makeCuriosity, nearestStaticPlace, sandY } from './environment'
+import { STATIC_PLACES, SURFACE_Y, TANK_W, WATER, dayPhase, locationPhrase, makeCuriosity, nearestStaticPlace, sandY } from './environment'
 import { angleDiff, constrain, dist, limit, v } from './steering'
 import { decide, hidePhrase, maxSpeedOf, perceive, pickShelter, placeTarget, restPhrase, speedFor, steer, type FishRuntime, type Perception, type Sim } from './behavior'
 import { leaveSchool, schoolForce, updateSchools } from './schooling'
@@ -15,6 +15,7 @@ import { clamp } from '@/lib/random'
 import { loadWorld, saveWorld } from '@/lib/storage'
 import { createThoughtGenerator, type ThoughtContext, type ThoughtGenerator } from '@/lib/thoughtEngine'
 import { MOOD_EFFECTS, fmtPct, marketMood, type MarketMood, type MarketSnapshot } from './market'
+import { ESCAPE_STAGES, type Conversation, type TalkLine, type TalkTopic } from '@/types/talk'
 
 export interface UIState {
   selectedId: string | null
@@ -29,6 +30,13 @@ const MAX_FOOD = 60
 const MAX_CURIOSITIES = 3
 const MAX_DISCOVERIES = 60
 const MAX_FISH = 80
+const MAX_CONVERSATIONS = 40
+const ESCAPE_READY = ESCAPE_STAGES.length - 1
+
+/** world ms a spoken line stays on screen / before the next line */
+export function lineDuration(text: string): number {
+  return 1800 + text.length * 45
+}
 
 export class Engine implements Sim {
   world: WorldState
@@ -52,6 +60,9 @@ export class Engine implements Sim {
   marketMood: MarketMood = 'calm'
   private candleAt = 0
   private pendingMood: { mood: MarketMood; seen: number } | null = null
+  /** what each fish is saying right now (render-only, not persisted) */
+  speech = new Map<string, { text: string; until: number }>()
+  private nextLineAt = 0
 
   private runtime = new Map<string, FishRuntime>()
   private placeMap = new Map<string, Place>()
@@ -65,6 +76,8 @@ export class Engine implements Sim {
   private started = false
 
   constructor(world: WorldState) {
+    world.conversations ??= []
+    world.escape ??= { stage: 0, notes: [], attempts: 0 }
     this.world = world
     this.log = new EventLog(() => this.world)
     this.reindex()
@@ -249,6 +262,7 @@ export class Engine implements Sim {
 
     this.updateFood(dt)
     this.updateCuriosities()
+    this.updateConversation()
 
     for (const f of w.fish) this.updateFish(f, dt)
 
@@ -805,8 +819,124 @@ export class Engine implements Sim {
       bubblesNearby: dist(f.pos, { x: 780, y: 760 }) < 200,
       previousThoughts: f.thoughts.slice(0, 4).map((t) => t.text),
       market: this.market && this.market.source !== 'pending' ? this.marketMood : null,
+      escapeStage: this.world.escape.stage,
+      escapeNote: this.world.escape.notes[this.world.escape.notes.length - 1]?.text ?? null,
       seq: f.thoughts.length + Math.floor(now / 1000),
     }
+  }
+
+  /* ------------------------------------------------------------ */
+  /* conversations & the escape plan                              */
+  /* ------------------------------------------------------------ */
+
+  activeConversation(): Conversation | null {
+    const c = this.world.conversations[this.world.conversations.length - 1]
+    return c && c.revealed < c.lines.length ? c : null
+  }
+
+  /** gather the participants and start speaking the lines one by one */
+  startConversation(input: {
+    participants: Fish[]
+    lines: TalkLine[]
+    topic: TalkTopic
+    summary: string
+    plan: { progress: boolean; note: string } | null
+    source: 'claude' | 'local'
+  }): void {
+    const w = this.world
+    const now = w.worldTime
+    const ps = input.participants.filter((f) => this.byId.has(f.id))
+    if (ps.length < 2 || !input.lines.length || this.activeConversation()) return
+    const c: Conversation = {
+      id: w.counters.nextEventId,
+      startedAt: now,
+      wall: Date.now(),
+      participants: ps.map((f) => f.id),
+      topic: input.topic,
+      summary: input.summary,
+      lines: input.lines,
+      revealed: 0,
+      source: input.source,
+      plan: input.plan,
+    }
+    w.conversations.push(c)
+    if (w.conversations.length > MAX_CONVERSATIONS) w.conversations.splice(0, w.conversations.length - MAX_CONVERSATIONS)
+
+    // huddle up around the first speaker
+    const total = input.lines.reduce((s, l) => s + lineDuration(l.text), 0) + 1500
+    const cx = ps.reduce((s, f) => s + f.pos.x, 0) / ps.length
+    const cy = ps.reduce((s, f) => s + f.pos.y, 0) / ps.length
+    ps.forEach((f, i) => {
+      const others = ps.filter((o) => o !== f).map((o) => o.name)
+      const with_ = others.length > 1 ? `${others.slice(0, -1).join(', ')} and ${others[others.length - 1]}` : others[0]
+      const angle = (i / ps.length) * Math.PI * 2
+      this.setAction(f, 'IDLE', `talking with ${with_}`, { kind: 'point', x: cx + Math.cos(angle) * 70, y: cy + Math.sin(angle) * 34 })
+      f.nextDecisionAt = now + total
+    })
+    const names = ps.map((f) => f.name)
+    const who = names.length > 2 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names.join(' and ')
+    const about = input.topic === 'token' ? `$${this.market?.ticker ?? 'TOKEN'}` : input.topic === 'escape' ? 'the escape' : `$${this.market?.ticker ?? 'TOKEN'} and the escape`
+    this.log.emit('talk', `${who} started talking about ${about}`, ps.map((f) => f.id))
+    this.nextLineAt = now + 600
+  }
+
+  private updateConversation(): void {
+    const now = this.world.worldTime
+    for (const [id, s] of this.speech) if (s.until < now) this.speech.delete(id)
+    const c = this.activeConversation()
+    if (!c || now < this.nextLineAt) return
+    const line = c.lines[c.revealed]
+    const f = this.byId.get(line.speakerId)
+    // a speaker who fled or left the tank just doesn't get their line in
+    if (f && f.action !== 'FLEE') {
+      const d = lineDuration(line.text)
+      this.speech.set(f.id, { text: line.text, until: now + d + 600 })
+      this.nextLineAt = now + d
+    }
+    c.revealed++
+    if (c.revealed >= c.lines.length) this.finishConversation(c)
+  }
+
+  private finishConversation(c: Conversation): void {
+    const w = this.world
+    const now = w.worldTime
+    const ps = c.participants.map((id) => this.byId.get(id)).filter((f): f is Fish => !!f)
+    for (const f of ps) {
+      const others = ps.filter((o) => o !== f)
+      remember(f, { t: now, kind: 'social', text: `talked with ${others.map((o) => o.name).join(' and ')} about ${c.summary}`, valence: 0.3, fishId: others[0]?.id })
+      for (const o of others) nudge(f, o, 0.04, 0.05, now)
+      f.stats.interactions++
+      f.nextDecisionAt = now + 500
+    }
+    w.counters.interactions++
+    if (c.plan?.progress && c.plan.note) {
+      const e = w.escape
+      e.stage = Math.min(ESCAPE_READY, e.stage + 1)
+      e.notes.push({ wall: Date.now(), text: c.plan.note, stage: e.stage })
+      if (e.notes.length > 30) e.notes.splice(0, e.notes.length - 30)
+      this.log.emit('talk', `the escape plan moved forward (${e.stage}/${ESCAPE_READY}, ${ESCAPE_STAGES[e.stage]}): ${c.plan.note}`, ps.map((f) => f.id))
+      if (e.stage >= ESCAPE_READY) this.escapeAttempt(ps)
+    }
+  }
+
+  /** the plan is ready: everyone in on it rushes the lid. it never works. */
+  private escapeAttempt(leaders: Fish[]): void {
+    const w = this.world
+    const now = w.worldTime
+    const e = w.escape
+    e.attempts++
+    const plotters = w.fish.filter((f) => leaders.includes(f) || f.memories.some((m) => m.text.startsWith('talked with') && now - m.t < 3_600_000))
+    for (const f of plotters) {
+      this.setAction(f, 'EXPLORE', 'rushing the lid', { kind: 'point', x: 1500 + (this.rand() - 0.5) * 300, y: WATER.top + 10 })
+      f.nextDecisionAt = now + 9000
+      f.stress = clamp(f.stress + 0.2)
+      remember(f, { t: now, kind: 'place', text: `tried to escape (attempt ${e.attempts}). the lid held`, valence: -0.2 })
+      this.thinkSoon(f)
+    }
+    this.log.emit('talk', `escape attempt #${e.attempts}: ${plotters.length} fish rushed the lid at once. the lid held.`, plotters.slice(0, 6).map((f) => f.id))
+    // regroup: they keep what they learned, but go back to plotting
+    e.stage = 3
+    e.notes.push({ wall: Date.now(), text: `attempt #${e.attempts} failed. the lid held. back to planning.`, stage: e.stage })
   }
 
   /* ------------------------------------------------------------ */
@@ -911,6 +1041,7 @@ export class Engine implements Sim {
     this.world.fish = this.world.fish.filter((x) => x !== f)
     this.byId.delete(id)
     this.runtime.delete(id)
+    this.speech.delete(id)
     for (const o of this.world.fish) delete o.relationships[id]
     if (this.ui.selectedId === id) this.ui.selectedId = null
     this.log.emit('system', `${f.name} was released from the tank`, [])

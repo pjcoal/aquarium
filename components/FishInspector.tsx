@@ -70,6 +70,12 @@ export function FishInspector({ fish, engine, onClose }: { fish: Fish; engine: E
         <p className="text-aqua">{fish.actionDetail}</p>
       </div>
 
+      {engine.speech.get(fish.id) && (
+        <p className="mt-2 border border-line2 px-2 py-1 text-[12px]">
+          <span className="label mr-1">says</span>
+          {engine.speech.get(fish.id)!.text}
+        </p>
+      )}
       <blockquote className="mt-2 border-l-2 border-aqua-dim/60 pl-2 text-[12px] leading-relaxed text-fg/90 italic">
         “{fish.lastThought || '…'}”
         {fish.lastThoughtAt > 0 && <span className="ml-1 text-[10px] text-dim not-italic">{ago(now - fish.lastThoughtAt)}</span>}

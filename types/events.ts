@@ -6,6 +6,7 @@ export type EventCategory =
   | 'discovery'
   | 'resting'
   | 'market'
+  | 'talk'
   | 'system'
 
 export interface SimEvent {

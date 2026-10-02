@@ -1,5 +1,6 @@
 import type { Fish, Vec } from './fish'
 import type { SimEvent } from './events'
+import type { Conversation, EscapePlan } from './talk'
 
 export type PlaceKind =
   | 'cave'
@@ -97,6 +98,9 @@ export interface WorldState {
   territories: Record<string, string>
   /** world time when last day/night phase announced */
   lastPhase: string
+  /** conversations between fish, newest last */
+  conversations: Conversation[]
+  escape: EscapePlan
 }
 
 export type SimSpeed = 1 | 2 | 4

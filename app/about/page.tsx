@@ -100,6 +100,14 @@ export default function AboutPage() {
         )}
       </section>
       <section>
+        <h2 className="label mb-1">conversations</h2>
+        <p className="text-fg/85">
+          every minute or two, a few fish who are near each other stop and talk. their conversations are written by claude from what the fish
+          actually are and remember: personality, mood, who they like and fear, what the water looks like, and how far the escape plan has
+          got. whatever they agree on is added to the plan. when the plan is ready, they try. so far the lid has always held.
+        </p>
+      </section>
+      <section>
         <h2 className="label mb-1">persistence</h2>
         <p className="text-fg/85">
           the tank lives in your browser&apos;s local storage and saves every few seconds. when you come back, the last ten minutes of your absence

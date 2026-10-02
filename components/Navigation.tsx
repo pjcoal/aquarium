@@ -11,6 +11,7 @@ const LINKS = [
   { href: '/fish', label: 'fish' },
   { href: '/schools', label: 'schools' },
   { href: '/species', label: 'species' },
+  { href: '/talk', label: 'talk' },
   { href: '/activity', label: 'activity' },
   { href: '/about', label: 'about' },
 ]

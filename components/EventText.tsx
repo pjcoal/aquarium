@@ -41,5 +41,6 @@ export const CAT_COLOR: Record<string, string> = {
   discovery: 'text-violet',
   resting: 'text-dim',
   market: 'text-good',
+  talk: 'text-violet',
   system: 'text-fg',
 }

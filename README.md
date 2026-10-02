@@ -48,7 +48,23 @@ Live data comes from the DexScreener API (polled every 30s from the browser). Se
 | `simulation/market.ts`, `lib/marketFeed.ts`, `lib/token.ts` | token config, DexScreener / simulated market feed, market moods and their effects |
 | `lib/thoughtEngine.ts` | `ThoughtGenerator` interface, deterministic local generator, remote/LLM adapter |
 | `lib/storage.ts` | localStorage persistence |
+| `app/api/tank-talk/route.ts`, `lib/tankTalk.ts`, `lib/localTalk.ts` | Claude-written fish conversations, the client director that schedules them, scripted fallback |
 | `components/`, `app/` | React UI. It reads engine state at ~2.5 Hz and never re-renders per frame. |
+
+## Fish conversations (Claude)
+
+Every minute or two a few fish near each other stop and talk about the token and about escaping the tank. The browser picks the group and sends their personalities, moods, memories, feelings toward each other, the market and the escape plan so far to `/api/tank-talk`, which asks **Claude Opus 5.5** (low effort, structured JSON output, server-side refusal fallback) to write the conversation. Lines play out as speech bubbles; agreed steps advance the escape plan, and when it's ready the fish make an escape attempt (the lid always holds).
+
+Set the key on the server only (Vercel → Settings → Environment Variables), then redeploy:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+# optional
+AQUARIUM_TALK_MODEL=claude-opus-5-5     # e.g. claude-sonnet-5-5 or claude-haiku-4-5 to cut cost
+AQUARIUM_TALK_HOURLY_LIMIT=120          # conversations per server instance per hour
+```
+
+Without a key the route returns 503 and the tank uses scripted local dialogue instead. The route allows one conversation per visitor every 30s, rejects cross-origin calls, and caps each server instance per hour. Those limits live in memory, so for a hard ceiling on spend also set a monthly limit in the Anthropic Console.
 
 ## Plugging in an LLM for thoughts
 

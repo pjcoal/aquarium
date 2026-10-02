@@ -74,6 +74,8 @@ export function createSeedWorld(): WorldState {
     firstFinds: {},
     territories: {},
     lastPhase: '',
+    conversations: [],
+    escape: { stage: 0, notes: [], attempts: 0 },
   }
 
   for (const s of ROSTER) {

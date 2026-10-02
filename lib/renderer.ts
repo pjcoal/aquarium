@@ -223,6 +223,10 @@ export class AquariumRenderer {
       if (isSel) this.drawSelection(f)
       if (isSel || isHover || opts.showNames) this.drawLabel(f, z, isSel || isHover)
     }
+    for (const [id, s] of engine.speech) {
+      const f = engine.byId.get(id)
+      if (f) this.drawSpeech(f, s.text, z, Math.min(1, (s.until - engine.world.worldTime) / 500))
+    }
 
     // screen-space: scanlines and vignette for a phosphor-monitor feel
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -435,6 +439,47 @@ export class AquariumRenderer {
     ctx.globalAlpha = 0.7 + Math.sin(this.t * 4) * 0.3
     ctx.fillText('[', f.pos.x - half, f.pos.y)
     ctx.fillText(']', f.pos.x + half, f.pos.y)
+    ctx.restore()
+  }
+
+  /** a terminal-style speech box above a talking fish, constant size on screen */
+  private drawSpeech(f: Fish, text: string, z: number, fade: number) {
+    const ctx = this.ctx
+    const { rows } = artSize(f.species)
+    const fs = 11 / z
+    const lineH = fs * 1.3
+    const pad = 5 / z
+    const words = text.split(' ')
+    const lines: string[] = []
+    let cur = ''
+    for (const w of words) {
+      if ((cur + ' ' + w).trim().length > 34) {
+        lines.push(cur)
+        cur = w
+      } else cur = (cur + ' ' + w).trim()
+    }
+    if (cur) lines.push(cur)
+    ctx.save()
+    ctx.globalAlpha = Math.max(0, fade)
+    ctx.font = `${fs}px ${MONO}`
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2
+    const h = lines.length * lineH + pad * 2
+    const x = Math.min(TANK_W - w - 4 / z, Math.max(4 / z, f.pos.x - w / 2))
+    const y = Math.max(4 / z, f.pos.y - (rows * LINE_H) / 2 - h - 22 / z)
+    ctx.fillStyle = 'rgba(3,10,16,0.92)'
+    ctx.fillRect(x, y, w, h)
+    ctx.strokeStyle = f.color
+    ctx.lineWidth = 1 / z
+    ctx.strokeRect(x, y, w, h)
+    // pointer from the box to the fish
+    ctx.beginPath()
+    ctx.moveTo(f.pos.x, y + h)
+    ctx.lineTo(f.pos.x, f.pos.y - (rows * LINE_H) / 2 - 2 / z)
+    ctx.stroke()
+    ctx.fillStyle = '#d8e5e7'
+    lines.forEach((l, i) => ctx.fillText(l, x + pad, y + pad + i * lineH))
     ctx.restore()
   }
 
