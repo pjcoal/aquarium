@@ -1,0 +1,149 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-ink: #03070b;
+  --color-panel: #060e14;
+  --color-panel2: #08131b;
+  --color-line: #143039;
+  --color-line2: #1d4450;
+  --color-fg: #d8e5e7;
+  --color-dim: #8aa5ac;
+  --color-faint: #56737b;
+  --color-aqua: #5ef2ff;
+  --color-aqua-dim: #2fb3c2;
+  --color-warn: #ffb867;
+  --color-bad: #ff7a6b;
+  --color-good: #86f7a8;
+  --color-violet: #c7a6ff;
+  --color-sky: #93b9ff;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+}
+
+html,
+body {
+  background: var(--color-ink);
+  color: var(--color-fg);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-image:
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(30, 140, 160, 0.09), transparent 70%),
+    linear-gradient(rgba(94, 242, 255, 0.018) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    100% 3px;
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(94, 242, 255, 0.25);
+}
+
+:focus-visible {
+  outline: 1px solid var(--color-aqua);
+  outline-offset: 2px;
+}
+
+.panel {
+  border: 1px solid var(--color-line);
+  background: rgba(6, 14, 20, 0.82);
+}
+
+.label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-dim);
+}
+
+.btn {
+  border: 1px solid var(--color-line2);
+  padding: 3px 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-fg);
+  background: rgba(4, 10, 15, 0.85);
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
+}
+.btn:hover {
+  border-color: var(--color-aqua-dim);
+  color: var(--color-aqua);
+}
+.btn[aria-pressed='true'] {
+  border-color: var(--color-aqua);
+  color: var(--color-ink);
+  background: var(--color-aqua);
+}
+.btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line2) transparent;
+}
+
+@keyframes feed-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+    background: rgba(94, 242, 255, 0.08);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    background: transparent;
+  }
+}
+.feed-in {
+  animation: feed-in 0.8s ease-out;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+.blink {
+  animation: blink 1.6s steps(2) infinite;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+.sheet-up {
+  animation: sheet-up 0.22s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
