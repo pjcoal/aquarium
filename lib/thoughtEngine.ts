@@ -129,7 +129,7 @@ export class LocalThoughtGenerator implements ThoughtGenerator {
     }
     for (const n of c.nearby.slice(0, 3)) {
       const nn = n.name.toLowerCase()
-      if (n.relation === 'stranger') add(0.8, `who is ${nn}? i haven't seen that one before.`)
+      if (n.relation === 'stranger') add(0.25, `who is ${nn}? i haven't seen that one before.`)
       if (n.relation === 'hostile' || n.relation === 'afraid') add(1.6, `${nn} again.`)
       if (n.bigger && c.traits.bravery < 0.4) add(1.2, `${nn} is very large up close.`)
       if (n.action === 'REST') add(0.6, `${nn} is sleeping. i'll be quiet.`)
