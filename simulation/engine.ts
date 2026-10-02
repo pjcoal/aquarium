@@ -265,7 +265,7 @@ export class Engine implements Sim {
           dusk: 'dusk. the light is fading',
           night: 'night. the tank goes quiet',
         }
-        if (dp.phase !== 'day') this.log.emit('system', text[dp.phase], [])
+        if (dp.phase !== 'day' && w.fish.length) this.log.emit('system', text[dp.phase], [])
       }
       w.lastPhase = dp.phase
     }
@@ -415,7 +415,8 @@ export class Engine implements Sim {
     }
     if (w.food.length) w.food = w.food.filter((f) => f.settledAt === null || now - f.settledAt < 240_000)
     if (now > w.counters.nextFeedAt) {
-      this.feed()
+      // nobody to feed: the feeder waits for the first fish
+      if (w.fish.length) this.feed()
       w.counters.nextFeedAt = now + (3 + this.rand() * 2.5) * 60_000 * MOOD_EFFECTS[this.marketMood].feedInterval
     }
   }
@@ -448,7 +449,7 @@ export class Engine implements Sim {
     let changed = false
     for (const c of w.curiosities) {
       if ((c.expiresAt ?? Infinity) < now) {
-        this.log.emit('exploration', `${c.name} is gone`, [])
+        if (w.fish.length) this.log.emit('exploration', `${c.name} is gone`, [])
         for (const f of w.fish) delete f.prefs.placeAffinity[c.id]
         delete w.territories[c.id]
         changed = true
@@ -457,7 +458,7 @@ export class Engine implements Sim {
     if (changed) w.curiosities = w.curiosities.filter((c) => (c.expiresAt ?? Infinity) >= now)
     if (now > w.counters.nextCuriosityAt) {
       w.counters.nextCuriosityAt = now + (5 + this.rand() * 6) * 60_000
-      if (w.curiosities.length < MAX_CURIOSITIES) {
+      if (w.fish.length && w.curiosities.length < MAX_CURIOSITIES) {
         const c = makeCuriosity(this.rand, now, w.counters.nextEventId)
         w.curiosities.push(c)
         changed = true
@@ -1244,7 +1245,7 @@ export class Engine implements Sim {
     this.log.wallOverride = null
     for (const f of w.fish) this.rt(f).arrived = false
 
-    if (ms > 60_000) {
+    if (ms > 60_000 && w.fish.length) {
       const di = w.counters.interactions - before.i
       const dd = w.counters.discoveries - before.d
       const dm = w.counters.meals - before.m
@@ -1313,7 +1314,7 @@ export class Engine implements Sim {
       w.counters.meals += meals
     }
     // stretches of quiet produce a few rest/feeding events
-    const feeds = Math.min(6, Math.floor(hours * 2))
+    const feeds = w.fish.length ? Math.min(6, Math.floor(hours * 2)) : 0
     for (let i = 0; i < feeds; i++) {
       pending.push({ wall: startWall + r() * ms, run: () => this.log.emit('feeding', 'the feeder dropped food while you were away', []) })
     }

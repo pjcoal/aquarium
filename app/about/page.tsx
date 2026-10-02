@@ -113,10 +113,6 @@ export default function AboutPage() {
           </button>
         </section>
       )}
-      <p className="text-[11px] text-dim">
-        coins launched here are created on pump.fun by their creators. nothing on this site is financial advice. an original aquarium simulation drawn
-        entirely in ascii.
-      </p>
     </article>
   )
 }
