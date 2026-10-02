@@ -2,7 +2,6 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { useEngine } from '@/lib/hooks'
 import { getAudio } from '@/lib/audio'
 import { savePrefs } from '@/lib/storage'
 
@@ -18,7 +17,6 @@ const LINKS = [
 
 export function Navigation({ onLaunch }: { onLaunch: () => void }) {
   const path = usePathname()
-  const engine = useEngine()
   const [sound, setSound] = useState(false)
 
   const toggleSound = async () => {
@@ -64,10 +62,6 @@ export function Navigation({ onLaunch }: { onLaunch: () => void }) {
           ))}
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
-          <span className="hidden items-center gap-1.5 text-[10px] tracking-widest text-dim lg:flex" aria-hidden>
-            <span className={`inline-block h-1.5 w-1.5 rounded-full ${engine?.ui.paused ? 'bg-warn' : 'bg-good blink'}`} />
-            {engine?.ui.paused ? 'PAUSED' : 'LIVE'}
-          </span>
           <button className="btn" onClick={toggleSound} aria-pressed={sound} aria-label={sound ? 'Mute ambient sound' : 'Play ambient sound'}>
             snd {sound ? 'on' : 'off'}
           </button>
