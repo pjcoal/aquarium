@@ -390,7 +390,7 @@ export function LaunchModal({ onClose }: { onClose: () => void }) {
               {config && !config.models.some((m) => m.available) && (
                 <p className="mt-2 border border-warn/50 px-2 py-1 text-[11px] text-warn">
                   no ai providers are connected on this server yet, so brains can&apos;t be picked. the site owner needs to add at least one of
-                  ANTHROPIC_API_KEY, OPENAI_API_KEY, XAI_API_KEY or DEEPSEEK_API_KEY.
+                  ANTHROPIC_API_KEY, OPENAI_API_KEY or DEEPSEEK_API_KEY.
                 </p>
               )}
               <div className="mt-2 space-y-2">

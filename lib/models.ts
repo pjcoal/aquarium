@@ -11,8 +11,6 @@ export const MODEL_OPTIONS: ModelOption[] = [
   { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', provider: 'anthropic', blurb: 'fast, light, brief' },
   { id: 'gpt-6.1-sol', label: 'GPT-6.1 Sol', provider: 'openai', blurb: "openai's strong all-rounder" },
   { id: 'gpt-6-luna', label: 'GPT-6 Luna', provider: 'openai', blurb: 'small and efficient' },
-  { id: 'grok-4.7', label: 'Grok 4.7', provider: 'xai', blurb: "xai's flagship" },
-  { id: 'grok-4.3', label: 'Grok 4.3', provider: 'xai', blurb: 'fast and cheap' },
   { id: 'deepseek-flash', label: 'DeepSeek Flash', provider: 'deepseek', blurb: 'quick, cheap, direct' },
   { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', provider: 'deepseek', blurb: "deepseek's flagship" },
 ]
@@ -20,7 +18,6 @@ export const MODEL_OPTIONS: ModelOption[] = [
 export const PROVIDER_LABEL: Record<Provider, string> = {
   anthropic: 'Claude',
   openai: 'OpenAI',
-  xai: 'Grok',
   deepseek: 'DeepSeek',
 }
 

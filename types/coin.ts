@@ -1,7 +1,7 @@
 import type { PersonalityPreset, SpeciesId } from './fish'
 import type { EscapePlan, TalkTopic } from './talk'
 
-export type Provider = 'anthropic' | 'openai' | 'xai' | 'deepseek'
+export type Provider = 'anthropic' | 'openai' | 'deepseek'
 
 export interface ModelOption {
   id: string

@@ -8,13 +8,11 @@ import { KEYS, getStore } from './store'
 const KEY_ENV: Record<Provider, string> = {
   anthropic: 'ANTHROPIC_API_KEY',
   openai: 'OPENAI_API_KEY',
-  xai: 'XAI_API_KEY',
   deepseek: 'DEEPSEEK_API_KEY',
 }
 
 /** OpenAI-compatible endpoints for the non-OpenAI providers */
 const BASE_URL: Partial<Record<Provider, string>> = {
-  xai: 'https://api.x.ai/v1',
   deepseek: 'https://api.deepseek.com',
 }
 
@@ -83,7 +81,7 @@ export async function complete(modelId: string, system: string, prompt: string, 
   }
 
   const client = openaiFor(m.provider)
-  // OpenAI's current models take max_completion_tokens; xAI and DeepSeek take max_tokens.
+  // OpenAI's current models take max_completion_tokens; DeepSeek takes max_tokens.
   // Reasoning models spend part of that budget thinking, so leave room.
   const budget = 2000
   const res = await client.chat.completions.create(
