@@ -110,7 +110,7 @@ function pickGroup(coins: CoinRecord[], markets: Record<string, MarketSnapshot>)
 
 async function judge(lines: SharedLine[], coins: CoinRecord[], plan: EscapePlan): Promise<{ summary: string; plan: { progress: boolean; note: string } | null }> {
   const transcript = lines.map((l) => `${coins.find((c) => c.mint === l.mint)?.name ?? '?'}: ${l.text}`).join('\n')
-  const judgeModel = ['claude-haiku-4-5', 'deepseek-chat', 'gpt-6-luna', 'grok-4.3'].find(modelAvailable)
+  const judgeModel = ['claude-haiku-4-5', 'deepseek-flash', 'gpt-6-luna', 'grok-4.3'].find(modelAvailable)
   if (judgeModel) {
     try {
       const raw = await complete(

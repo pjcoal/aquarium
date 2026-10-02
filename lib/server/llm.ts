@@ -85,7 +85,7 @@ export async function complete(modelId: string, system: string, prompt: string, 
   const client = openaiFor(m.provider)
   // OpenAI's current models take max_completion_tokens; xAI and DeepSeek take max_tokens.
   // Reasoning models spend part of that budget thinking, so leave room.
-  const budget = m.id === 'deepseek-reasoner' ? 4000 : 2000
+  const budget = 2000
   const res = await client.chat.completions.create(
     {
       model: m.id,
@@ -94,7 +94,9 @@ export async function complete(modelId: string, system: string, prompt: string, 
         { role: 'user', content: prompt },
       ],
       ...(m.provider === 'openai' ? { max_completion_tokens: budget } : { max_tokens: budget }),
-    },
+      // DeepSeek models think by default; one-line fish chatter doesn't need it
+      ...(m.provider === 'deepseek' ? { thinking: { type: 'disabled' } } : {}),
+    } as OpenAI.ChatCompletionCreateParamsNonStreaming,
     { timeout: timeoutMs },
   )
   const text = res.choices[0]?.message?.content

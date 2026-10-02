@@ -13,8 +13,8 @@ export const MODEL_OPTIONS: ModelOption[] = [
   { id: 'gpt-6-luna', label: 'GPT-6 Luna', provider: 'openai', blurb: 'small and efficient' },
   { id: 'grok-4.7', label: 'Grok 4.7', provider: 'xai', blurb: "xai's flagship" },
   { id: 'grok-4.3', label: 'Grok 4.3', provider: 'xai', blurb: 'fast and cheap' },
-  { id: 'deepseek-chat', label: 'DeepSeek Chat', provider: 'deepseek', blurb: 'direct, no-nonsense' },
-  { id: 'deepseek-reasoner', label: 'DeepSeek Reasoner', provider: 'deepseek', blurb: 'thinks before it speaks' },
+  { id: 'deepseek-flash', label: 'DeepSeek Flash', provider: 'deepseek', blurb: 'quick, cheap, direct' },
+  { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', provider: 'deepseek', blurb: "deepseek's flagship" },
 ]
 
 export const PROVIDER_LABEL: Record<Provider, string> = {

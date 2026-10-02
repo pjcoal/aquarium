@@ -36,7 +36,7 @@ No API keys or external assets. The tank is rendered entirely as ASCII on a canv
 
 The tank starts empty. Every fish is a coin launched from the site:
 
-1. The creator fills in the coin (name, ticker, description, image) and its fish (species, colour, personality), and picks a **brain**: Claude Opus 5.5 / Sonnet 5.5 / Haiku 4.5, GPT-6.1 Sol / GPT-6 Luna, Grok 4.7 / 4.3, or DeepSeek Chat / Reasoner.
+1. The creator fills in the coin (name, ticker, description, image) and its fish (species, colour, personality), and picks a **brain**: Claude Opus 5.5 / Sonnet 5.5 / Haiku 4.5, GPT-6.1 Sol / GPT-6 Luna, Grok 4.7 / 4.3, or DeepSeek Flash / V4 Pro.
 2. The image and metadata go to IPFS through pump.fun; PumpPortal builds the pump.fun create transaction; the server builds a launch-fee transfer to your treasury.
 3. The creator approves both in their own wallet (Phantom, Solflare, Backpack). The create is sent first, then the fee.
 4. `/api/launch/register` verifies both on-chain (the mint was created by a pump.fun transaction the creator signed, and the treasury received the fee) and adds the coin to the shared roster. Every viewer's tank drops the fish in on its next poll.
