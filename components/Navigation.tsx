@@ -39,8 +39,8 @@ export function Navigation({ onLaunch }: { onLaunch: () => void }) {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-ink/90 backdrop-blur-sm">
       <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 sm:flex-nowrap sm:gap-6 sm:px-5">
-        <Link href="/" className="flex shrink-0 items-baseline gap-2 text-fg hover:text-aqua" aria-label="Aquarium home">
-          <span className="text-[15px] font-bold tracking-[0.3em]">AQUARIUM</span>
+        <Link href="/" className="flex shrink-0 items-baseline gap-2 text-fg hover:text-aqua" aria-label="Tank home">
+          <span className="text-[15px] font-bold tracking-[0.3em]">TANK</span>
           <span aria-hidden className="hidden text-[11px] text-aqua-dim md:inline">
             {'><(((°>'}
           </span>

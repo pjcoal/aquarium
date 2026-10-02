@@ -3,7 +3,7 @@ import './globals.css'
 import { AppShell } from '@/components/AppShell'
 
 export const metadata: Metadata = {
-  title: 'AQUARIUM — every fish has a mind',
+  title: 'Tank — every fish has a mind',
   description: 'A persistent digital aquarium populated by autonomous fish agents.',
 }
 
