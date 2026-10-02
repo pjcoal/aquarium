@@ -14,9 +14,14 @@ export function RecentlyIntroduced({ count = 6 }: { count?: number }) {
   const list = [...engine.world.fish].sort((a, b) => b.introducedAt - a.introducedAt).slice(0, count)
   return (
     <section aria-labelledby="recent-h">
-      <h2 id="recent-h" className="mb-3 text-[13px] tracking-[0.3em] text-fg">
-        RECENTLY INTRODUCED
-      </h2>
+      <div className="mb-3 flex items-baseline justify-between gap-2">
+        <h2 id="recent-h" className="text-[13px] tracking-[0.3em] text-fg">
+          RECENTLY INTRODUCED
+        </h2>
+        <Link href="/coins" className="text-[11px] text-dim hover:text-aqua">
+          all launched coins →
+        </Link>
+      </div>
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {list.map((f) => {
           const s = statusOf(f)

@@ -7,6 +7,7 @@ import { savePrefs } from '@/lib/storage'
 
 const LINKS = [
   { href: '/', label: 'world' },
+  { href: '/coins', label: 'coins' },
   { href: '/fish', label: 'fish' },
   { href: '/schools', label: 'schools' },
   { href: '/species', label: 'species' },
