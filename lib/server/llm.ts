@@ -60,7 +60,9 @@ export async function complete(modelId: string, system: string, prompt: string, 
   if (!(await spend())) throw new BrainUnavailable('hourly brain budget spent')
 
   if (m.provider === 'anthropic') {
-    anthropic ??= new Anthropic()
+    // user-level keys (sk-ant-usr-…) must name the workspace on every request
+    const workspace = process.env.ANTHROPIC_WORKSPACE_ID
+    anthropic ??= new Anthropic(workspace ? { defaultHeaders: { 'anthropic-workspace-id': workspace } } : {})
     // Opus 5.5 / Sonnet 5.5: low effort for short lines, server-side refusal fallback.
     // Haiku 4.5 takes neither.
     const modern = m.id !== 'claude-haiku-4-5'
