@@ -113,6 +113,8 @@ export interface ActionRecord {
 export interface Thought {
   t: number
   text: string
+  /** the model that produced it, when it came from the fish's brain */
+  model?: string
 }
 
 export interface Preferences {

@@ -9,7 +9,10 @@ import { decide, hidePhrase, maxSpeedOf, perceive, pickShelter, placeTarget, res
 import { leaveSchool, schoolForce, updateSchools } from './schooling'
 import { compatibility, decayRelationships, nudge, peekRel, rel, relationLabel } from './relationships'
 import { MAX_HISTORY, MAX_THOUGHTS, adjustAffinity, favoritePlace, recallFoodSpot, remember } from './memory'
-import { bodyLength, createFish, type NewFishInput } from './fish'
+import { bodyLength, createFish } from './fish'
+import type { CoinRecord, SharedConversation, SharedThought, TankConfig } from '@/types/coin'
+import type { EscapePlan } from '@/types/talk'
+import { hashString, mulberry32 } from '@/lib/random'
 import { createSeedWorld } from './seed'
 import { clamp } from '@/lib/random'
 import { loadWorld, saveWorld } from '@/lib/storage'
@@ -29,7 +32,7 @@ export interface UIState {
 const MAX_FOOD = 60
 const MAX_CURIOSITIES = 3
 const MAX_DISCOVERIES = 60
-const MAX_FISH = 80
+const MAX_FISH = 150
 const MAX_CONVERSATIONS = 40
 const ESCAPE_READY = ESCAPE_STAGES.length - 1
 
@@ -62,6 +65,17 @@ export class Engine implements Sim {
   private pendingMood: { mood: MarketMood; seen: number } | null = null
   /** what each fish is saying right now (render-only, not persisted) */
   speech = new Map<string, { text: string; until: number }>()
+  /** the shared roster: every fish is a launched coin, keyed by mint (= fish id) */
+  coins = new Map<string, CoinRecord>()
+  /** launch settings and brain availability, from the server */
+  tankConfig: TankConfig | null = null
+  coinMarkets = new Map<string, MarketSnapshot>()
+  coinMood = new Map<string, MarketMood>()
+  private coinCandleAt = new Map<string, number>()
+  private pendingTalks: SharedConversation[] = []
+  private seenTalks = new Set<string>()
+  private thoughtAt = new Map<string, number>()
+  private sharedLoaded = false
   private nextLineAt = 0
 
   private runtime = new Map<string, FishRuntime>()
@@ -99,7 +113,7 @@ export class Engine implements Sim {
       return e
     }
     const e = new Engine(createSeedWorld())
-    e.log.emit('system', 'the tank is open. 24 fish are already living here.', [])
+    e.log.emit('system', 'the tank is open. every fish in it is a coin someone launched.', [])
     return e
   }
 
@@ -305,7 +319,8 @@ export class Engine implements Sim {
     const speedFrac = f.speed / sp.maxSpeed
     if (f.action === 'REST') f.energy = clamp(f.energy + dt * (rt.arrived ? 0.006 : 0.0015) * (night ? 1.4 : 1))
     else f.energy = clamp(f.energy - dt * (0.00028 + 0.0008 * speedFrac) * (1.2 - P.energy * 0.4) * (night ? 1.3 : 1))
-    const fx = MOOD_EFFECTS[this.marketMood]
+    // each fish feels its own coin's chart; without one it feels the whole tank's
+    const fx = MOOD_EFFECTS[this.coinMood.get(f.id) ?? this.marketMood]
     if (f.action === 'EXPLORE' || f.action === 'INVESTIGATE') f.curiosity = clamp(f.curiosity - dt * 0.01)
     else f.curiosity = clamp(f.curiosity + dt * 0.004 * (0.3 + P.curiosity) * fx.curiosity)
     f.stress = clamp(f.stress - dt * (f.action === 'HIDE' && rt.arrived ? 0.1 : 0.035))
@@ -841,14 +856,16 @@ export class Engine implements Sim {
     topic: TalkTopic
     summary: string
     plan: { progress: boolean; note: string } | null
-    source: 'claude' | 'local'
+    source: 'brains' | 'local'
+    id?: string
+    remote?: boolean
   }): void {
     const w = this.world
     const now = w.worldTime
     const ps = input.participants.filter((f) => this.byId.has(f.id))
     if (ps.length < 2 || !input.lines.length || this.activeConversation()) return
     const c: Conversation = {
-      id: w.counters.nextEventId,
+      id: input.id ?? String(w.counters.nextEventId),
       startedAt: now,
       wall: Date.now(),
       participants: ps.map((f) => f.id),
@@ -858,6 +875,7 @@ export class Engine implements Sim {
       revealed: 0,
       source: input.source,
       plan: input.plan,
+      remote: input.remote,
     }
     w.conversations.push(c)
     if (w.conversations.length > MAX_CONVERSATIONS) w.conversations.splice(0, w.conversations.length - MAX_CONVERSATIONS)
@@ -894,7 +912,10 @@ export class Engine implements Sim {
       this.nextLineAt = now + d
     }
     c.revealed++
-    if (c.revealed >= c.lines.length) this.finishConversation(c)
+    if (c.revealed >= c.lines.length) {
+      this.finishConversation(c)
+      this.playPendingTalk()
+    }
   }
 
   private finishConversation(c: Conversation): void {
@@ -909,6 +930,10 @@ export class Engine implements Sim {
       f.nextDecisionAt = now + 500
     }
     w.counters.interactions++
+    if (c.remote) {
+      if (c.plan?.progress) this.log.emit('talk', `the escape plan moved forward: ${c.plan.note}`, ps.map((f) => f.id))
+      return
+    }
     if (c.plan?.progress && c.plan.note) {
       const e = w.escape
       e.stage = Math.min(ESCAPE_READY, e.stage + 1)
@@ -921,22 +946,27 @@ export class Engine implements Sim {
 
   /** the plan is ready: everyone in on it rushes the lid. it never works. */
   private escapeAttempt(leaders: Fish[]): void {
+    const e = this.world.escape
+    e.attempts++
+    this.escapeVisual(leaders, e.attempts)
+    // regroup: they keep what they learned, but go back to plotting
+    e.stage = 3
+    e.notes.push({ wall: Date.now(), text: `attempt #${e.attempts} failed. the lid held. back to planning.`, stage: e.stage })
+  }
+
+  /** the rush for the lid, as it plays out in this viewer's tank */
+  escapeVisual(leaders: Fish[], attempt: number): void {
     const w = this.world
     const now = w.worldTime
-    const e = w.escape
-    e.attempts++
     const plotters = w.fish.filter((f) => leaders.includes(f) || f.memories.some((m) => m.text.startsWith('talked with') && now - m.t < 3_600_000))
     for (const f of plotters) {
       this.setAction(f, 'EXPLORE', 'rushing the lid', { kind: 'point', x: 1500 + (this.rand() - 0.5) * 300, y: WATER.top + 10 })
       f.nextDecisionAt = now + 9000
       f.stress = clamp(f.stress + 0.2)
-      remember(f, { t: now, kind: 'place', text: `tried to escape (attempt ${e.attempts}). the lid held`, valence: -0.2 })
+      remember(f, { t: now, kind: 'place', text: `tried to escape (attempt ${attempt}). the lid held`, valence: -0.2 })
       this.thinkSoon(f)
     }
-    this.log.emit('talk', `escape attempt #${e.attempts}: ${plotters.length} fish rushed the lid at once. the lid held.`, plotters.slice(0, 6).map((f) => f.id))
-    // regroup: they keep what they learned, but go back to plotting
-    e.stage = 3
-    e.notes.push({ wall: Date.now(), text: `attempt #${e.attempts} failed. the lid held. back to planning.`, stage: e.stage })
+    this.log.emit('talk', `escape attempt #${attempt}: ${plotters.length} fish rushed the lid at once. the lid held.`, plotters.slice(0, 6).map((f) => f.id))
   }
 
   /* ------------------------------------------------------------ */
@@ -1016,24 +1046,136 @@ export class Engine implements Sim {
   /* user actions                                                  */
   /* ------------------------------------------------------------ */
 
-  addFish(input: NewFishInput): Fish | null {
-    if (this.world.fish.length >= MAX_FISH) return null
+  /**
+   * Make this tank's fish match the shared coin roster: drop in fish for new
+   * coins (falling from the surface if the coin is fresh) and remove fish
+   * whose coin isn't in the roster.
+   */
+  syncRoster(coins: CoinRecord[]): void {
     const now = this.world.worldTime
-    const x = 300 + this.rand() * (TANK_W - 600)
-    const f = createFish(input, now, this.rand, { entering: true, x })
-    f.memories.push({ t: now, kind: 'arrival', text: 'arrived in the tank', valence: 0.2 })
-    f.thoughts.unshift({ t: now, text: 'this water tastes different from where i came from.' })
-    f.lastThought = f.thoughts[0].text
-    f.lastThoughtAt = now
-    this.world.fish.push(f)
-    this.byId.set(f.id, f)
-    this.log.emit('social', `${f.name} the ${SPECIES[f.species].name.toLowerCase()} was introduced to the tank`, [f.id])
-    this.save()
-    this.notify()
-    return f
+    const ids = new Set(coins.map((c) => c.mint))
+    let changed = false
+    for (const f of [...this.world.fish]) {
+      if (!ids.has(f.id)) {
+        this.removeFish(f.id)
+        changed = true
+      }
+    }
+    for (const c of coins) {
+      this.coins.set(c.mint, c)
+      if (this.byId.has(c.mint) || this.world.fish.length >= MAX_FISH) continue
+      const fresh = Date.now() - c.createdAt < 3 * 60_000
+      // same personality for every viewer: seed from the mint
+      const rand = mulberry32(hashString(c.mint))
+      const f = createFish(
+        { name: c.name.slice(0, 18), species: c.species, color: c.color, preset: c.preset, personalityText: c.personalityText },
+        now,
+        rand,
+        { id: c.mint, entering: fresh, x: 300 + rand() * (TANK_W - 600), ageMs: Math.max(0, Date.now() - c.createdAt) },
+      )
+      f.introducedAt = c.createdAt
+      f.memories.push({ t: now, kind: 'arrival', text: `was dropped into the tank as $${c.symbol}`, valence: 0.2 })
+      this.world.fish.push(f)
+      this.byId.set(f.id, f)
+      if (fresh) this.log.emit('social', `$${c.symbol} launched: ${f.name} the ${SPECIES[f.species].name.toLowerCase()} was dropped into the tank`, [f.id])
+      changed = true
+    }
+    for (const mint of [...this.coins.keys()]) if (!ids.has(mint)) this.coins.delete(mint)
+    if (changed) this.notify()
   }
 
-  releaseFish(id: string): void {
+  /** shared conversations, brain thoughts and the escape plan from the server */
+  applyShared(conversations: SharedConversation[], thoughts: Record<string, SharedThought>, escape: EscapePlan): void {
+    const w = this.world
+    // conversations: play recent ones we haven't seen, oldest first
+    for (const c of [...conversations].reverse()) {
+      if (this.seenTalks.has(c.id)) continue
+      this.seenTalks.add(c.id)
+      if (Date.now() - c.createdAt < 4 * 60_000) this.pendingTalks.push(c)
+    }
+    this.playPendingTalk()
+    // brain thoughts override the local generator when newer
+    for (const [mint, t] of Object.entries(thoughts)) {
+      const f = this.byId.get(mint)
+      if (!f || (this.thoughtAt.get(mint) ?? 0) >= t.at) continue
+      this.thoughtAt.set(mint, t.at)
+      if (f.lastThought === t.text) continue
+      f.lastThought = t.text
+      f.lastThoughtAt = w.worldTime
+      f.thoughts.unshift({ t: w.worldTime, text: t.text, model: t.model })
+      if (f.thoughts.length > MAX_THOUGHTS) f.thoughts.length = MAX_THOUGHTS
+      f.nextThoughtAt = w.worldTime + 120_000
+    }
+    // the escape plan is shared; a new failed attempt plays out here too
+    if (this.sharedLoaded && escape.attempts > w.escape.attempts) {
+      this.escapeVisual(w.fish.filter((f) => f.action !== 'REST').slice(0, 8), escape.attempts)
+    }
+    w.escape = escape
+    this.sharedLoaded = true
+  }
+
+  private playPendingTalk(): void {
+    if (this.activeConversation()) return
+    const c = this.pendingTalks.shift()
+    if (!c) return
+    const ps = c.participants.map((m) => this.byId.get(m)).filter((f): f is Fish => !!f)
+    if (ps.length < 2) return this.playPendingTalk()
+    this.startConversation({
+      id: c.id,
+      participants: ps,
+      lines: c.lines.filter((l) => this.byId.has(l.mint)).map((l) => ({ speakerId: l.mint, text: l.text, model: l.model })),
+      topic: c.topic,
+      summary: c.summary,
+      plan: c.plan,
+      source: c.lines.some((l) => l.model !== 'local') ? 'brains' : 'local',
+      remote: true,
+    })
+  }
+
+  /** per-coin market data; the tank-wide mood is the average of all coins */
+  applyCoinMarkets(markets: Record<string, MarketSnapshot>): void {
+    const now = Date.now()
+    for (const [mint, m] of Object.entries(markets)) {
+      this.coinMarkets.set(mint, m)
+      const mood = marketMood(m)
+      this.coinMood.set(mint, mood)
+      const f = this.byId.get(mint)
+      if (!f || now - (this.coinCandleAt.get(mint) ?? 0) < 4 * 60_000) continue
+      if (m.change5m <= -10) {
+        this.coinCandleAt.set(mint, now)
+        f.stress = clamp(f.stress + 0.5)
+        this.hide(f, null, null)
+        f.actionDetail = `hiding from the red water`
+        f.nextDecisionAt = this.world.worldTime + 8000
+        remember(f, { t: this.world.worldTime, kind: 'threat', text: `felt $${m.ticker} turn red`, valence: -0.5 })
+        this.log.emit('market', `$${m.ticker} ${fmtPct(m.change5m)} in 5m. ${f.name} ran for cover`, [f.id])
+      } else if (m.change5m >= 10) {
+        this.coinCandleAt.set(mint, now)
+        f.curiosity = clamp(f.curiosity + 0.4)
+        f.energy = clamp(f.energy + 0.2)
+        remember(f, { t: this.world.worldTime, kind: 'place', text: `felt $${m.ticker} glow green`, valence: 0.5 })
+        this.log.emit('market', `$${m.ticker} ${fmtPct(m.change5m)} in 5m. ${f.name} is zooming around the tank`, [f.id])
+      }
+    }
+    const all = [...this.coinMarkets.values()]
+    if (!all.length) return
+    const avg = (k: 'change5m' | 'change1h' | 'change24h') => all.reduce((s, m) => s + m[k], 0) / all.length
+    this.applyMarket({
+      source: 'live',
+      ticker: 'TANK',
+      priceUsd: null,
+      change5m: avg('change5m'),
+      change1h: avg('change1h'),
+      change24h: avg('change24h'),
+      buys5m: all.reduce((s, m) => s + m.buys5m, 0),
+      sells5m: all.reduce((s, m) => s + m.sells5m, 0),
+      marketCap: all.reduce((s, m) => s + (m.marketCap ?? 0), 0),
+      url: null,
+      updatedAt: now,
+    })
+  }
+
+  private removeFish(id: string): void {
     const f = this.byId.get(id)
     if (!f) return
     if (f.schoolId) leaveSchool(this, f, 'dissolved')
@@ -1044,9 +1186,6 @@ export class Engine implements Sim {
     this.speech.delete(id)
     for (const o of this.world.fish) delete o.relationships[id]
     if (this.ui.selectedId === id) this.ui.selectedId = null
-    this.log.emit('system', `${f.name} was released from the tank`, [])
-    this.save()
-    this.notify()
   }
 
   select(id: string | null): void {

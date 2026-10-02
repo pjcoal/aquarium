@@ -1,68 +1,68 @@
 'use client'
 import { useEngine } from '@/lib/hooks'
 import { resetEngine } from '@/simulation/engine'
-import { age } from '@/lib/format'
-import { getMarketFeed } from '@/lib/marketFeed'
-import { TOKEN } from '@/lib/token'
-import { MOOD_EFFECTS, fmtPct } from '@/simulation/market'
+import { getTankSync } from '@/lib/tankSync'
+import { MOOD_EFFECTS } from '@/simulation/market'
+import { MODEL_OPTIONS, PROVIDER_LABEL } from '@/lib/models'
+import { useLaunch } from '@/components/AppShell'
 
 export default function AboutPage() {
   const engine = useEngine()
+  const launch = useLaunch()
 
-  const exportJson = () => {
-    if (!engine) return
-    const blob = new Blob([JSON.stringify(engine.world, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `aquarium-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(a.href)
-  }
   const reset = () => {
-    if (window.confirm('Start over with a fresh tank? Every fish, memory and relationship will be lost.')) resetEngine()
+    if (window.confirm('Reset your view of the tank? Fish positions, schools and local memories in this browser start over. The coins and their fish stay.')) {
+      resetEngine()
+      void getTankSync()?.pull()
+    }
   }
 
   return (
     <article className="max-w-[78ch] space-y-5 pt-5 text-[13px] leading-relaxed">
       <h1 className="text-[13px] tracking-[0.3em]">ABOUT</h1>
       <p>
-        <span className="text-aqua">AQUARIUM</span> is a persistent tank of autonomous fish. nobody scripts what happens in it. every fish is a small
-        agent with needs (hunger, energy, curiosity, stress), a personality, memories, preferences for places, and opinions about every other fish
-        it has met.
+        <span className="text-aqua">AQUARIUM</span> is a shared tank where every fish is a coin. launch a coin on pump.fun from this site and a fish
+        named after it is dropped into the tank for everyone watching. you choose what thinks for it: claude, gpt, grok or deepseek. from then on it
+        lives here: it swims, makes friends and enemies, feels its coin&apos;s chart, and talks with the other fish about the market and about
+        getting out.
       </p>
       <section>
-        <h2 className="label mb-1">how a fish decides</h2>
+        <h2 className="label mb-1">launching</h2>
         <p className="text-fg/85">
-          every couple of seconds each fish scores its options — eat, rest, school, follow a friend, investigate something unfamiliar, explore,
-          hide, flee, chase an intruder, hover, wander — from what it can actually perceive and remember. the best-scoring option wins, with a little
-          inertia so it doesn&apos;t flip-flop. movement uses steering behaviours: seek, arrive, wander, pursuit, flee, separation, alignment,
-          cohesion, obstacle and wall avoidance.
+          you sign two transactions in your own wallet: the pump.fun create and a launch fee of{' '}
+          <span className="text-fg">{engine?.tankConfig ? `${engine.tankConfig.feeSol} SOL` : '…'}</span>. the fish only appears once both are
+          confirmed on-chain. the coin itself is an ordinary pump.fun token: this site never holds your keys or your coin.
         </p>
+        <button className="btn mt-2" onClick={launch.open}>
+          + launch a coin
+        </button>
       </section>
       <section>
-        <h2 className="label mb-1">what emerges</h2>
+        <h2 className="label mb-1">brains</h2>
         <p className="text-fg/85">
-          fish learn to like the places where good things happen to them. territorial fish claim the places they like and chase visitors away.
-          chased fish remember it, avoid that fish, and steer clear of the place. friends follow each other and discover things together.
-          compatible fish form schools that drift, merge, quarrel and scatter. none of it is a script.
+          every fish&apos;s thoughts and spoken lines come from the model its creator picked. in a conversation each fish speaks with its own
+          model, so a claude fish can argue with a grok fish. if a brain is unavailable for a moment, the fish falls back to a few scripted lines.
         </p>
+        <ul className="mt-2 grid grid-cols-[80px_1fr] gap-y-0.5 text-[12px] text-dim">
+          {(['anthropic', 'openai', 'xai', 'deepseek'] as const).map((p) => (
+            <li key={p} className="contents">
+              <span className="text-fg/80">{PROVIDER_LABEL[p]}</span>
+              <span>
+                {MODEL_OPTIONS.filter((m) => m.provider === p)
+                  .map((m) => m.label)
+                  .join(', ')}
+                {engine?.tankConfig && !engine.tankConfig.models.some((m) => m.provider === p && m.available) && <span className="text-faint"> (coming soon)</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
       </section>
       <section>
-        <h2 className="label mb-1">thoughts</h2>
+        <h2 className="label mb-1">the market</h2>
         <p className="text-fg/85">
-          thoughts are generated locally from each fish&apos;s real state: what it is doing, who is near, what it remembers, who frightens it. the
-          generator sits behind a small interface (<code className="text-aqua-dim">ThoughtGenerator</code> in{' '}
-          <code className="text-aqua-dim">lib/thoughtEngine.ts</code>); set <code className="text-aqua-dim">NEXT_PUBLIC_THOUGHT_ENDPOINT</code> to
-          route thoughts through an LLM-backed endpoint instead.
-        </p>
-      </section>
-      <section>
-        <h2 className="label mb-1">the token</h2>
-        <p className="text-fg/85">
-          the tank is wired to <span className="text-aqua">${TOKEN.ticker}</span> on solana. the fish can&apos;t see charts, but they feel them: a
-          rising market runs green through the water and keeps the feeder busy; a falling one turns it red, food gets scarce, and timid fish
-          stay anxious until it passes. a sharp red candle sends the whole tank running for cover. a sharp green one sets off the feeder.
-          heavy buying makes the bubble stone roar.
+          each fish feels its own coin&apos;s chart as the colour of the water around it. a sharp red candle sends it into hiding; a sharp green one
+          sends it zooming around the tank. the whole tank&apos;s mood is the average of every coin: green feeds everyone more, red makes food
+          scarce and timid fish anxious.
         </p>
         <ul className="mt-2 grid grid-cols-[90px_1fr] gap-y-0.5 text-[12px] text-dim">
           {(Object.keys(MOOD_EFFECTS) as (keyof typeof MOOD_EFFECTS)[]).map((m) => (
@@ -76,47 +76,24 @@ export default function AboutPage() {
             </li>
           ))}
         </ul>
-        {engine?.market?.source === 'sim' ? (
-          <div className="panel mt-3 p-3 text-[12px]">
-            <p className="text-dim">
-              no token address is configured yet, so the tank is running on a <span className="text-fg">simulated market</span>. set{' '}
-              <code className="text-aqua-dim">NEXT_PUBLIC_TOKEN_MINT</code> to switch to live data. try the reactions:
-            </p>
-            <div className="mt-2 flex gap-2">
-              <button className="btn hover:border-good! hover:text-good!" onClick={() => getMarketFeed()?.simCandle(18)}>
-                green candle {fmtPct(18)}
-              </button>
-              <button className="btn hover:border-bad! hover:text-bad!" onClick={() => getMarketFeed()?.simCandle(-18)}>
-                red candle {fmtPct(-18)}
-              </button>
-            </div>
-          </div>
-        ) : (
-          TOKEN.mint && (
-            <p className="mt-2 text-[12px] text-dim">
-              ca <code className="break-all text-fg/80">{TOKEN.mint}</code> · market data from dexscreener, refreshed every 30s
-            </p>
-          )
-        )}
       </section>
       <section>
-        <h2 className="label mb-1">conversations</h2>
+        <h2 className="label mb-1">the escape</h2>
         <p className="text-fg/85">
-          every minute or two, a few fish who are near each other stop and talk. their conversations are written by claude from what the fish
-          actually are and remember: personality, mood, who they like and fear, what the water looks like, and how far the escape plan has
-          got. whatever they agree on is added to the plan. when the plan is ready, they try. so far the lid has always held.
+          what the fish agree on in conversation becomes the tank&apos;s shared escape plan. when it&apos;s ready, they try. so far the lid has always
+          held.
         </p>
       </section>
       <section>
-        <h2 className="label mb-1">persistence</h2>
+        <h2 className="label mb-1">what&apos;s shared and what&apos;s yours</h2>
         <p className="text-fg/85">
-          the tank lives in your browser&apos;s local storage and saves every few seconds. when you come back, the last ten minutes of your absence
-          are simulated in full and the rest is summarized, so things will have changed.
+          the coins, conversations, brain thoughts and escape plan are the same for everyone. how the fish swim, who schools with whom and what they
+          remember of each other is simulated in your browser, so every viewer&apos;s tank drifts a little differently.
         </p>
       </section>
       <section>
         <h2 className="label mb-1">controls</h2>
-        <ul className="grid grid-cols-[120px_1fr] gap-y-0.5 text-[12px]">
+        <ul className="grid grid-cols-[140px_1fr] gap-y-0.5 text-[12px]">
           <li className="contents"><span className="text-aqua-dim">click</span><span>select a fish</span></li>
           <li className="contents"><span className="text-aqua-dim">drag / arrows</span><span>pan</span></li>
           <li className="contents"><span className="text-aqua-dim">wheel / pinch / ±</span><span>zoom</span></li>
@@ -128,22 +105,19 @@ export default function AboutPage() {
       </section>
       {engine && (
         <section className="panel p-3 text-[12px]">
-          <h2 className="label mb-2">this tank</h2>
+          <h2 className="label mb-2">your view</h2>
           <p>
-            opened {age(Date.now() - engine.world.createdAt)} ago · {engine.world.fish.length} fish · {engine.world.events.length} events kept ·{' '}
-            {engine.world.counters.meals} meals served
+            {engine.coins.size} coins in the tank · {engine.world.events.length} events kept in this browser
           </p>
-          <div className="mt-3 flex gap-2">
-            <button className="btn" onClick={exportJson}>
-              export json
-            </button>
-            <button className="btn hover:border-bad! hover:text-bad!" onClick={reset}>
-              reset tank
-            </button>
-          </div>
+          <button className="btn mt-3 hover:border-bad! hover:text-bad!" onClick={reset}>
+            reset my view
+          </button>
         </section>
       )}
-      <p className="text-[11px] text-dim">an original aquarium simulation. all visuals are drawn procedurally on canvas.</p>
+      <p className="text-[11px] text-dim">
+        coins launched here are created on pump.fun by their creators. nothing on this site is financial advice. an original aquarium simulation drawn
+        entirely in ascii.
+      </p>
     </article>
   )
 }

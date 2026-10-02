@@ -101,7 +101,7 @@ export function applyPersonalityText(f: Fish, text: string) {
   f.prefs.depthBias = clamp(f.prefs.depthBias, -0.5, 0.5)
 }
 
-export function createFish(input: NewFishInput, worldTime: number, rand: () => number, opts?: { ageMs?: number; entering?: boolean; x?: number; y?: number }): Fish {
+export function createFish(input: NewFishInput, worldTime: number, rand: () => number, opts?: { ageMs?: number; entering?: boolean; x?: number; y?: number; id?: string }): Fish {
   const sp = SPECIES[input.species]
   const base = PRESETS[input.preset].traits
   const personality: Personality = {
@@ -116,7 +116,7 @@ export function createFish(input: NewFishInput, worldTime: number, rand: () => n
   const x = opts?.x ?? 200 + rand() * (TANK_W - 400)
   const midDepth = (sp.depth[0] + sp.depth[1]) / 2
   const y = opts?.y ?? (entering ? SURFACE_Y - 10 : 80 + midDepth * 640)
-  const id = uid(rand)
+  const id = opts?.id ?? uid(rand)
   const f: Fish = {
     id,
     name: input.name.trim().slice(0, 18) || 'Unnamed',

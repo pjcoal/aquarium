@@ -11,6 +11,8 @@ import { MiniMap } from '@/components/MiniMap'
 import { Bar } from '@/components/Bar'
 import { ActivityFeed } from '@/components/ActivityFeed'
 import { REL_COLOR, STATUS_COLOR } from '@/components/FishInspector'
+import { CoinPanel } from '@/components/CoinPanel'
+import { modelLabel } from '@/lib/models'
 
 function Panel({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
   return (
@@ -53,12 +55,6 @@ export default function FishProfilePage() {
     engine.ui.track = true
     engine.notify()
     router.push('/')
-  }
-  const release = () => {
-    if (window.confirm(`Release ${fish.name} from the tank? This cannot be undone.`)) {
-      engine.releaseFish(fish.id)
-      router.push('/fish')
-    }
   }
 
   return (
@@ -105,20 +101,21 @@ export default function FishProfilePage() {
               <button className="btn border-aqua-dim! text-aqua!" onClick={viewInTank}>
                 view in tank
               </button>
-              <button className="btn" onClick={release}>
-                release
-              </button>
             </div>
           </div>
         </section>
 
         <div className="grid gap-3">
+          <Panel title="the coin">
+            <CoinPanel engine={engine} mint={fish.id} />
+          </Panel>
           <Panel title="current thought">
             <p className="text-[15px] leading-relaxed text-fg italic">“{fish.lastThought || '…'}”</p>
+            {fish.thoughts[0]?.model && <p className="mt-0.5 text-[10px] tracking-wider text-violet uppercase">thought by {modelLabel(fish.thoughts[0].model)}</p>}
             <ul className="mt-2 space-y-0.5 text-[11px] text-dim">
               {fish.thoughts.slice(1, 5).map((t, i) => (
                 <li key={i}>
-                  <span className="tabular-nums">{ago(now - t.t)}</span> — “{t.text}”
+                  <span className="tabular-nums">{ago(now - t.t)}</span> — “{t.text}”{t.model && t.model !== 'local' ? ` (${modelLabel(t.model)})` : ''}
                 </li>
               ))}
             </ul>

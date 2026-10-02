@@ -3,10 +3,12 @@ export type TalkTopic = 'token' | 'escape' | 'both'
 export interface TalkLine {
   speakerId: string
   text: string
+  /** the model that wrote this line ('local' for scripted lines) */
+  model?: string
 }
 
 export interface Conversation {
-  id: number
+  id: string
   /** world time the conversation started */
   startedAt: number
   wall: number
@@ -16,8 +18,10 @@ export interface Conversation {
   lines: TalkLine[]
   /** how many lines have been spoken so far */
   revealed: number
-  source: 'claude' | 'local'
+  source: 'brains' | 'local'
   plan: { progress: boolean; note: string } | null
+  /** came from the shared server state; the server owns the escape plan */
+  remote?: boolean
 }
 
 export interface EscapePlan {
@@ -28,30 +32,3 @@ export interface EscapePlan {
 }
 
 export const ESCAPE_STAGES = ['unspoken', 'whispers', 'an idea', 'a plan', 'recruiting', 'rehearsing', 'ready'] as const
-
-/** what the browser sends to /api/tank-talk */
-export interface TalkRequest {
-  topic: TalkTopic
-  location: string
-  ticker: string
-  market: { mood: string; change1h: number; change24h: number; simulated: boolean } | null
-  plan: { stage: number; notes: string[]; attempts: number }
-  fish: {
-    name: string
-    species: string
-    personality: string
-    mood: string
-    doing: string
-    memories: string[]
-    feelings: string[]
-  }[]
-  recent: string[]
-}
-
-/** what /api/tank-talk returns */
-export interface TalkResponse {
-  lines: { speaker: string; text: string }[]
-  summary: string
-  plan: { progress: boolean; note: string }
-  model?: string
-}

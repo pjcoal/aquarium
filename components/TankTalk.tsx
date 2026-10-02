@@ -4,19 +4,16 @@ import type { Conversation } from '@/types/talk'
 import { ESCAPE_STAGES } from '@/types/talk'
 import type { Engine } from '@/simulation/engine'
 import { useEngine } from '@/lib/hooks'
-import { getTalkDirector } from '@/lib/tankTalk'
+import { modelLabel } from '@/lib/models'
 import { clock } from '@/lib/format'
 
+/** which brains are thinking in this tank right now */
 export function MindsBadge({ engine }: { engine: Engine }) {
-  const d = getTalkDirector()
-  const mode = d?.mode ?? 'checking'
-  const label = mode === 'claude' ? `claude${d?.model ? ` · ${d.model.replace(/^claude-/, '')}` : ''}` : mode === 'local' ? 'local · no api key' : 'connecting'
-  void engine
+  const counts = new Map<string, number>()
+  for (const c of engine.coins.values()) counts.set(c.model, (counts.get(c.model) ?? 0) + 1)
+  const label = counts.size ? `${counts.size} model${counts.size > 1 ? 's' : ''} thinking` : 'no brains yet'
   return (
-    <span
-      className={`border px-1 text-[9px] tracking-wider ${mode === 'claude' ? 'border-violet/60 text-violet' : 'border-line2 text-dim'}`}
-      title={mode === 'local' ? 'Set ANTHROPIC_API_KEY on the server to let Claude write the conversations.' : undefined}
-    >
+    <span className="border border-violet/60 px-1 text-[9px] tracking-wider text-violet" title={[...counts].map(([m, n]) => `${modelLabel(m)} × ${n}`).join('\n')}>
       minds: {label}
     </span>
   )
@@ -54,14 +51,14 @@ export function ConversationView({ c, engine, live = false }: { c: Conversation;
           {c.summary}
         </span>
         <span className="shrink-0">
-          {clock(c.wall)} · {c.source}
+          {clock(c.wall)}
         </span>
       </div>
       <ul className="space-y-0.5">
         {shown.map((l, i) => {
           const f = engine.byId.get(l.speakerId)
           return (
-            <li key={i} className="grid grid-cols-[64px_1fr] gap-2">
+            <li key={i} className="grid grid-cols-[64px_1fr] gap-2" title={l.model ? `written by ${modelLabel(l.model)}` : undefined}>
               {f ? (
                 <Link href={`/fish/${f.id}`} className="truncate text-right hover:underline" style={{ color: f.color }}>
                   {f.name.toLowerCase()}
@@ -69,7 +66,10 @@ export function ConversationView({ c, engine, live = false }: { c: Conversation;
               ) : (
                 <span className="text-right text-dim">gone</span>
               )}
-              <span className="text-fg/90">{l.text}</span>
+              <span className="text-fg/90">
+                {l.text}
+                {l.model && <span className="ml-2 text-[9px] tracking-wider text-faint uppercase">{l.model === 'local' ? 'scripted' : modelLabel(l.model)}</span>}
+              </span>
             </li>
           )
         })}
@@ -101,7 +101,7 @@ export function TankTalk() {
       {latest ? (
         <ConversationView c={latest} engine={engine} live={latest === live} />
       ) : (
-        <p className="text-[12px] text-dim">nobody has said anything yet. give them a minute.</p>
+        <p className="text-[12px] text-dim">nobody has said anything yet. fish start talking once at least two coins are in the tank.</p>
       )}
       <EscapeMeter engine={engine} />
     </section>

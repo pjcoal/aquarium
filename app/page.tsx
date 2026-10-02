@@ -23,7 +23,7 @@ export default function WorldPage() {
           {absence ? (
             <span className="text-aqua">welcome back. the tank kept going while you were away.</span>
           ) : (
-            'a persistent tank of autonomous fish. leave it open. come back tomorrow.'
+            'every fish is a coin. launch one, give it a brain, and watch it live.'
           )}
         </p>
       </div>

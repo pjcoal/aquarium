@@ -2,8 +2,33 @@
 import { Engine } from '../simulation/engine'
 import { createSeedWorld } from '../simulation/seed'
 
+import type { CoinRecord } from '../types/coin'
+import { SPECIES_LIST } from '../simulation/species'
+import { PRESET_LIST } from '../simulation/fish'
+
 const minutes = Number(process.argv[2] ?? 20)
 const e = new Engine(createSeedWorld())
+// a tank of 24 made-up coins
+const names = ['Luna', 'Milo', 'Nova', 'Finn', 'Atlas', 'Coral', 'Pip', 'Juno', 'Orin', 'Kesh', 'Wren', 'Ivo', 'Sable', 'Tull', 'Mira', 'Basil', 'Echo', 'Fable', 'Gus', 'Hollis', 'Ines', 'Jet', 'Koi', 'Lark']
+e.syncRoster(
+  names.map((n, i): CoinRecord => ({
+    mint: `mint${i}`.padEnd(32, 'x'),
+    name: n,
+    symbol: n.toUpperCase().slice(0, 4),
+    description: '',
+    image: null,
+    metadataUri: '',
+    creator: 'creator',
+    model: 'claude-haiku-4-5',
+    species: SPECIES_LIST[i % SPECIES_LIST.length].id,
+    color: SPECIES_LIST[i % SPECIES_LIST.length].color,
+    preset: PRESET_LIST[(i * 3) % PRESET_LIST.length],
+    personalityText: '',
+    createdAt: Date.now() - 3_600_000,
+    createSig: '',
+    feeSig: '',
+  })),
+)
 const t0 = performance.now()
 const steps = minutes * 60 * 30
 for (let i = 0; i < steps; i++) e.step(1 / 30)

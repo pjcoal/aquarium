@@ -2,7 +2,7 @@
 
 *Every fish has a mind.*
 
-A persistent digital aquarium of autonomous fish agents. Each fish has needs, a personality, memories, place preferences, and relationships. Schools, territories, feuds and discoveries emerge from the simulation. None of it is scripted.
+A shared ASCII aquarium where every fish is a coin launched on pump.fun, with an AI brain its creator picked. Each fish has needs, a personality, memories, place preferences, and relationships. Schools, territories, feuds and discoveries emerge from the simulation. None of it is scripted.
 
 ```bash
 npm install
@@ -12,27 +12,6 @@ npm run sim        # headless: simulate 30 minutes and print what happened
 ```
 
 No API keys or external assets. The tank is rendered entirely as ASCII on a canvas (fish like `><(((°>`, rocks of `#%@`, sand of `.,:`), and sound is synthesized with WebAudio.
-
-## The token
-
-The tank reacts to a Solana token's market:
-
-| market | in the tank |
-| --- | --- |
-| euphoric / bullish (green) | green tint, feeder runs faster and drops more, fish get curious, green thoughts |
-| bearish / panic (red) | red tint, food gets scarce, timid fish carry lingering anxiety and hide |
-| red candle (≤ −8% in 5m) | the whole tank flinches, timid fish bolt for shelter |
-| green candle (≥ +8% in 5m) | the feeder fires |
-| heavy buying | the bubble stone roars |
-
-Until launch, leave `NEXT_PUBLIC_TOKEN_MINT` unset and the tank runs on a clearly labelled **simulated** market (the About page has buttons to fire test candles). After launch, set these in Vercel → Project → Settings → Environment Variables and redeploy:
-
-```
-NEXT_PUBLIC_TOKEN_MINT=<mint address>
-NEXT_PUBLIC_TOKEN_TICKER=<ticker>
-```
-
-Live data comes from the DexScreener API (polled every 30s from the browser). See `lib/token.ts`, `lib/marketFeed.ts` and `simulation/market.ts`.
 
 ## Layout
 
@@ -45,30 +24,49 @@ Live data comes from the DexScreener API (polled every 30s from the browser). Se
 | `simulation/relationships.ts`, `memory.ts`, `events.ts` | social graph, memories & learned place affinity, event log with cooldowns |
 | `simulation/environment.ts`, `species.ts`, `seed.ts` | tank geometry, landmarks, day cycle, species parameters, starting population |
 | `lib/renderer.ts`, `lib/asciiFish.ts` | ASCII canvas renderer (scenery on a character grid, swaying plants, bubbles, fish) |
-| `simulation/market.ts`, `lib/marketFeed.ts`, `lib/token.ts` | token config, DexScreener / simulated market feed, market moods and their effects |
+| `simulation/market.ts` | market moods and their effects on fish |
 | `lib/thoughtEngine.ts` | `ThoughtGenerator` interface, deterministic local generator, remote/LLM adapter |
 | `lib/storage.ts` | localStorage persistence |
-| `app/api/tank-talk/route.ts`, `lib/tankTalk.ts`, `lib/localTalk.ts` | Claude-written fish conversations, the client director that schedules them, scripted fallback |
+| `app/api/tank`, `lib/server/brains.ts`, `lib/server/llm.ts`, `lib/localTalk.ts` | shared state, the brain heartbeat (conversations, thoughts, escape plan), multi-provider completions, scripted fallback |
+| `app/api/launch/*`, `lib/server/solana.ts`, `components/LaunchModal.tsx` | pump.fun launch flow, fee transfer, on-chain verification |
+| `lib/tankSync.ts`, `lib/dexscreener.ts`, `lib/server/store.ts` | browser sync with the shared tank, per-coin markets, Redis store |
 | `components/`, `app/` | React UI. It reads engine state at ~2.5 Hz and never re-renders per frame. |
 
-## Fish conversations (Claude)
+## Coins and their fish
 
-Every minute or two a few fish near each other stop and talk about the token and about escaping the tank. The browser picks the group and sends their personalities, moods, memories, feelings toward each other, the market and the escape plan so far to `/api/tank-talk`, which asks **Claude Opus 5.5** (low effort, structured JSON output, server-side refusal fallback) to write the conversation. Lines play out as speech bubbles; agreed steps advance the escape plan, and when it's ready the fish make an escape attempt (the lid always holds).
+The tank starts empty. Every fish is a coin launched from the site:
 
-Set the key on the server only (Vercel → Settings → Environment Variables), then redeploy:
+1. The creator fills in the coin (name, ticker, description, image) and its fish (species, colour, personality), and picks a **brain**: Claude Opus 5.5 / Sonnet 5.5 / Haiku 4.5, GPT-6.1 Sol / GPT-6 Luna, Grok 4.7 / 4.3, or DeepSeek Chat / Reasoner.
+2. The image and metadata go to IPFS through pump.fun; PumpPortal builds the pump.fun create transaction; the server builds a launch-fee transfer to your treasury.
+3. The creator approves both in their own wallet (Phantom, Solflare, Backpack). The create is sent first, then the fee.
+4. `/api/launch/register` verifies both on-chain (the mint was created by a pump.fun transaction the creator signed, and the treasury received the fee) and adds the coin to the shared roster. Every viewer's tank drops the fish in on its next poll.
+
+If the fee or registration fails after the coin exists, the browser keeps a pending launch and offers "finish launch".
+
+Each fish feels its own coin's DexScreener chart (red candles send it hiding, green ones send it zooming); the tank's mood is the average of every coin.
+
+### Brains
+
+`/api/tank` serves the shared state and, after responding, runs at most one brain task: a conversation every `AQUARIUM_TALK_INTERVAL_S` (default 90s) or a single fish's thought every `AQUARIUM_THINK_INTERVAL_S` (default 30s), tank-wide, no matter how many people are watching. In a conversation each fish speaks with its own model. Agreed steps advance a shared escape plan; when it's ready the fish try (the lid holds). A provider without a key, a spent hourly budget (`AQUARIUM_LLM_HOURLY_LIMIT`, default 300 calls) or an error falls back to scripted lines.
+
+### Configuration (Vercel → Settings → Environment Variables)
 
 ```
-ANTHROPIC_API_KEY=sk-ant-...
-# optional
-AQUARIUM_TALK_MODEL=claude-opus-5-5     # e.g. claude-sonnet-5-5 or claude-haiku-4-5 to cut cost
-AQUARIUM_TALK_HOURLY_LIMIT=120          # conversations per server instance per hour
+# launching
+NEXT_PUBLIC_TREASURY_WALLET=<your SOL address that receives launch fees>
+NEXT_PUBLIC_LAUNCH_FEE_SOL=0.05
+SOLANA_RPC_URL=<a mainnet RPC, e.g. Helius; the public RPC is heavily rate limited>
+
+# shared state: add Upstash Redis from Vercel → Storage (sets KV_REST_API_URL / KV_REST_API_TOKEN)
+
+# brains: set the ones you want to offer; the rest show as "soon"
+ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
+XAI_API_KEY=
+DEEPSEEK_API_KEY=
 ```
 
-Without a key the route returns 503 and the tank uses scripted local dialogue instead. The route allows one conversation per visitor every 30s, rejects cross-origin calls, and caps each server instance per hour. Those limits live in memory, so for a hard ceiling on spend also set a monthly limit in the Anthropic Console.
-
-## Plugging in an LLM for thoughts
-
-Set `NEXT_PUBLIC_THOUGHT_ENDPOINT` to a URL that accepts a POSTed `ThoughtContext` JSON and returns `{ "thought": "..." }`. `RemoteThoughtGenerator` rate-limits itself and falls back to the local generator on any failure.
+Launching stays disabled until a treasury wallet is set and, in production, Redis is connected. For local development without a chain, `AQUARIUM_DEV_SKIP_CHAIN=1` lets `/api/launch/register` skip on-chain verification (ignored in production).
 
 ## Persistence
 

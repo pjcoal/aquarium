@@ -8,6 +8,7 @@ import { statusOf } from '@/simulation/fish'
 import { age, ago, depthLabel, pct } from '@/lib/format'
 import { Bar } from './Bar'
 import { FishSprite } from './FishSprite'
+import { CoinPanel } from './CoinPanel'
 
 export const STATUS_COLOR: Record<string, string> = {
   AWAKE: 'text-good',
@@ -64,6 +65,10 @@ export function FishInspector({ fish, engine, onClose }: { fish: Fish; engine: E
           </button>
         )}
       </header>
+
+      <div className="mt-2 border-b border-line pb-2">
+        <CoinPanel engine={engine} mint={fish.id} compact />
+      </div>
 
       <div className="mt-2">
         <div className="label">currently</div>

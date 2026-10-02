@@ -6,11 +6,13 @@ import { SPECIES } from '@/simulation/species'
 import { statusOf } from '@/simulation/fish'
 import { asciiFor } from '@/lib/format'
 import { STATUS_COLOR } from './FishInspector'
+import { modelLabel } from '@/lib/models'
 
 export function FishCard({ fish, engine }: { fish: Fish; engine: Engine }) {
   const sp = SPECIES[fish.species]
   const status = statusOf(fish)
   const school = engine.schoolById(fish.schoolId)
+  const coin = engine.coins.get(fish.id)
   return (
     <Link
       href={`/fish/${fish.id}`}
@@ -22,6 +24,7 @@ export function FishCard({ fish, engine }: { fish: Fish; engine: Engine }) {
       <div className="flex min-w-0 items-baseline justify-between gap-2">
         <div className="min-w-0">
           <span className="font-bold tracking-[0.15em] text-fg group-hover:text-aqua">{fish.name.toUpperCase()}</span>
+          {coin && <span className="ml-2 text-aqua">${coin.symbol}</span>}
           <span className="ml-2 text-dim">{sp.name}</span>
         </div>
         <span className={`shrink-0 text-[10px] tracking-widest ${STATUS_COLOR[status]}`}>{status}</span>
@@ -39,6 +42,11 @@ export function FishCard({ fish, engine }: { fish: Fish; engine: Engine }) {
           <span>
             found <span className="text-fg tabular-nums">{fish.discoveries.length}</span>
           </span>
+          {coin && (
+            <span>
+              brain <span className="text-violet">{modelLabel(coin.model)}</span>
+            </span>
+          )}
         </p>
       </div>
     </Link>

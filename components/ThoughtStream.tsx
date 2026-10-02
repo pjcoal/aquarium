@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useEngine } from '@/lib/hooks'
 import { ago } from '@/lib/format'
+import { modelLabel } from '@/lib/models'
 
 /** The most recent thoughts across the tank. */
 export function ThoughtStream({ count = 6 }: { count?: number }) {
@@ -23,6 +24,9 @@ export function ThoughtStream({ count = 6 }: { count?: number }) {
             <span>{f.lastThoughtAt ? ago(now - f.lastThoughtAt) : ''}</span>
           </div>
           <p className="text-fg/85 italic">“{f.lastThought}”</p>
+          {f.thoughts[0]?.model && f.thoughts[0].model !== 'local' && f.thoughts[0].text === f.lastThought && (
+            <p className="text-[9px] tracking-wider text-violet uppercase">{modelLabel(f.thoughts[0].model)}</p>
+          )}
         </li>
       ))}
       <li className="pt-1 text-[11px] text-dim">

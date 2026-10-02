@@ -16,7 +16,7 @@ const LINKS = [
   { href: '/about', label: 'about' },
 ]
 
-export function Navigation({ onAdd }: { onAdd: () => void }) {
+export function Navigation({ onLaunch }: { onLaunch: () => void }) {
   const path = usePathname()
   const engine = useEngine()
   const [sound, setSound] = useState(false)
@@ -71,8 +71,8 @@ export function Navigation({ onAdd }: { onAdd: () => void }) {
           <button className="btn" onClick={toggleSound} aria-pressed={sound} aria-label={sound ? 'Mute ambient sound' : 'Play ambient sound'}>
             snd {sound ? 'on' : 'off'}
           </button>
-          <button onClick={onAdd} className="btn border-aqua-dim! text-aqua! hover:bg-aqua! hover:text-ink!">
-            + add a fish
+          <button onClick={onLaunch} className="btn border-aqua-dim! text-aqua! hover:bg-aqua! hover:text-ink!">
+            + launch a coin
           </button>
         </div>
       </div>

@@ -1,13 +1,13 @@
-import type { Fish } from '@/types/fish'
 import type { TalkTopic } from '@/types/talk'
 import type { MarketMood } from '@/simulation/market'
 import { pick } from './random'
 
+/** Scripted lines, used when a fish's brain is unavailable (no key, budget spent, error). */
 const TOKEN_LINES: Record<MarketMood, string[]> = {
-  euphoric: ['the water is so green today. i told you it would be.', 'green water, more pellets. that is just science.', 'everyone is swimming faster. even basil.'],
-  bullish: ['the water has a green edge again.', "${t} is up. i can taste it.", 'the feeder likes it when the water is green.'],
+  euphoric: ['the water is so green around me today. i told you it would be.', 'green water, more pellets. that is just science.', 'everyone is swimming faster. even the slow ones.'],
+  bullish: ['the water has a green edge again.', '${t} is up. i can taste it.', 'the feeder likes it when the water is green.'],
   calm: ["${t} hasn't moved. neither have i.", 'clear water. nothing to report.', 'flat. like the sand.'],
-  bearish: ["it's going red. don't look at it.", 'less food when the water is red. i keep track.', 'red water makes the big ones short-tempered.'],
+  bearish: ["it's going red around me. don't look at it.", 'less food when the water is red. i keep track.', 'red water makes everyone short-tempered.'],
   panic: ['everything is red. where do we hide?', 'i felt the whole tank flinch.', 'this is fine. this is fine.'],
 }
 
@@ -26,7 +26,9 @@ const REPLIES = [
   'count me in, as long as i can come back for dinner.',
 ]
 
-const PLAN_STEPS = [
+const THOUGHTS = ['the glass is cold on this side.', 'i wonder who launched the others.', 'the lid is the problem. it was always the lid.', 'somebody up there is watching my chart.']
+
+export const PLAN_STEPS = [
   'map the gap in the lid near the filter',
   'practice swimming up all at once',
   'find out where the bubbles go',
@@ -35,32 +37,18 @@ const PLAN_STEPS = [
   'learn the feeder schedule',
 ]
 
-/** A simple scripted conversation used when no Claude API key is configured. */
-export function localConversation(group: Fish[], topic: TalkTopic, mood: MarketMood, ticker: string, stage: number, rand: () => number = Math.random) {
-  const lines: { speakerId: string; text: string }[] = []
-  const n = 4 + Math.floor(rand() * 3)
-  const t = `$${ticker.toLowerCase()}`
-  const escapePool = ESCAPE_LINES[Math.min(2, Math.floor(stage / 2))]
-  const used = new Set<string>()
-  // pick a line nobody has said yet in this conversation
-  const fresh = (pool: string[]) => {
-    const left = pool.filter((l) => !used.has(l))
-    const line = pick(left.length ? left : pool, rand)
-    used.add(line)
-    return line
-  }
-  for (let i = 0; i < n; i++) {
-    const speaker = group[i % group.length]
-    let text: string
-    if (i === 0) text = topic === 'escape' ? fresh(escapePool) : fresh(TOKEN_LINES[mood])
-    else if (i % 2 === 1) text = fresh(REPLIES)
-    else text = topic === 'token' ? fresh(TOKEN_LINES[mood]) : fresh(escapePool)
-    lines.push({ speakerId: speaker.id, text: text.replace('${t}', t) })
-  }
-  const progress = topic !== 'token' && rand() < 0.3
-  return {
-    lines,
-    summary: topic === 'token' ? `the colour of ${t}` : topic === 'escape' ? 'getting out of the tank' : `${t} and the escape`,
-    plan: progress ? { progress: true, note: pick(PLAN_STEPS, rand) } : null,
-  }
+export function localLine(opts: { topic: TalkTopic; mood: MarketMood; symbol: string; stage: number; reply: boolean; avoid: string[] }, rand: () => number = Math.random): string {
+  const pool = opts.reply
+    ? REPLIES
+    : opts.topic === 'token'
+      ? TOKEN_LINES[opts.mood]
+      : opts.topic === 'escape'
+        ? ESCAPE_LINES[Math.min(2, Math.floor(opts.stage / 2))]
+        : [...TOKEN_LINES[opts.mood], ...ESCAPE_LINES[Math.min(2, Math.floor(opts.stage / 2))]]
+  const fresh = pool.filter((l) => !opts.avoid.includes(l))
+  return pick(fresh.length ? fresh : pool, rand).replace('${t}', `$${opts.symbol.toLowerCase()}`)
+}
+
+export function localThought(mood: MarketMood, symbol: string, rand: () => number = Math.random): string {
+  return pick([...THOUGHTS, ...TOKEN_LINES[mood]], rand).replace('${t}', `$${symbol.toLowerCase()}`)
 }

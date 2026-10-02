@@ -7,11 +7,13 @@ import { TANK_H, TANK_W } from '@/simulation/environment'
 import { worldClock } from '@/lib/format'
 import { loadPrefs, savePrefs } from '@/lib/storage'
 import type { SimSpeed } from '@/types/simulation'
+import { useLaunch } from './AppShell'
 
 const MAX_ZOOM_FACTOR = 6
 
 export function AquariumCanvas({ className = '' }: { className?: string }) {
   const engine = useEngine()
+  const launch = useLaunch()
   const reduced = useReducedMotion()
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -381,6 +383,18 @@ export function AquariumCanvas({ className = '' }: { className?: string }) {
         </div>
         {!selected && (
           <div className="pointer-events-none absolute right-2 bottom-2 hidden text-[10px] tracking-wider text-dim sm:block">click a fish to inspect · drag to pan · scroll to zoom</div>
+        )}
+        {engine && engine.world.fish.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="panel max-w-[340px] p-4 text-center text-[12px]">
+              <pre aria-hidden className="mb-2 text-aqua">{'  ><(((°>\n  ?  ?  ?'}</pre>
+              <p className="text-fg">the tank is empty.</p>
+              <p className="mt-1 text-dim">every fish here is a coin. launch one and it gets dropped in with the brain you choose.</p>
+              <button className="btn mt-3 border-aqua! text-aqua! hover:bg-aqua! hover:text-ink!" onClick={launch.open}>
+                + launch the first coin
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
