@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { getAudio } from '@/lib/audio'
 import { savePrefs } from '@/lib/storage'
+import { SiteTokenButton } from './SiteToken'
 
 const LINKS = [
   { href: '/', label: 'world' },
@@ -63,6 +64,7 @@ export function Navigation({ onLaunch }: { onLaunch: () => void }) {
           ))}
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
+          <SiteTokenButton />
           <button className="btn" onClick={toggleSound} aria-pressed={sound} aria-label={sound ? 'Mute ambient sound' : 'Play ambient sound'}>
             snd {sound ? 'on' : 'off'}
           </button>

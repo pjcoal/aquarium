@@ -5,6 +5,7 @@ import { getTankSync } from '@/lib/tankSync'
 import { MOOD_EFFECTS } from '@/simulation/market'
 import { MODEL_OPTIONS, PROVIDER_LABEL } from '@/lib/models'
 import { useLaunch } from '@/components/AppShell'
+import { SiteTokenPanel } from '@/components/SiteToken'
 
 export default function AboutPage() {
   const engine = useEngine()
@@ -26,6 +27,10 @@ export default function AboutPage() {
         lives here: it swims, makes friends and enemies, feels its coin&apos;s chart, and talks with the other fish about the market and about
         getting out.
       </p>
+      <section>
+        <h2 className="label mb-1">the token</h2>
+        <SiteTokenPanel />
+      </section>
       <section>
         <h2 className="label mb-1">launching</h2>
         <p className="text-fg/85">
